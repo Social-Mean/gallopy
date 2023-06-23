@@ -9,6 +9,8 @@ Created on Fri Mar  3 15:30:14 2023
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from scipy.signal import find_peaks  # 寻峰函数
+from numpy.linalg import inv
 
 plt.rcParams["xtick.direction"] = "in"
 plt.rcParams["ytick.direction"] = "in"
@@ -20,8 +22,6 @@ plt.rcParams["savefig.transparent"] = True
 plt.rcParams["figure.dpi"] = 600
 plt.rcParams["legend.fancybox"] = False
 plt.rcParams["legend.framealpha"] = 1
-from scipy.signal import find_peaks  # 寻峰函数
-from numpy.linalg import inv
 
 
 c0 = 299_792_458
@@ -39,10 +39,10 @@ class TMMSolver(object):
         self.k0 = self.omega / c0
 
     def get_M(self, kx):
-        k = self.epsilon_list * self.mu_list * self.omega**2 / c0**2
+        k = self.epsilon_list * self.mu_list * self.omega ** 2 / c0 ** 2
         kz = np.sqrt(
-            self.epsilon_list * self.mu_list * self.omega**2 / c0**2
-            - kx**2
+            self.epsilon_list * self.mu_list * self.omega ** 2 / c0 ** 2
+            - kx ** 2
             + 0j
         )
         # 计算D矩阵
@@ -237,15 +237,15 @@ class TMMSolver(object):
 
     # def get_field(self, neff, plot=False):
     def get_field(
-        self,
-        z_list,
-        neff,
-        M,
-        eigen_M_list,
-        plot=False,
-        color="r",
-        holdon=False,
-        order=0,
+            self,
+            z_list,
+            neff,
+            M,
+            eigen_M_list,
+            plot=False,
+            color="r",
+            holdon=False,
+            order=0,
     ):
         # print(M)
         kx_tilde = neff
@@ -253,7 +253,7 @@ class TMMSolver(object):
 
         k_list = self.n_list * self.k0
         # # +0j 是为了给负数开方得到复数
-        kz_list = np.sqrt(k_list**2 - kx**2 + 0j)
+        kz_list = np.sqrt(k_list ** 2 - kx ** 2 + 0j)
         # print("kz_list", kz_list)
         AB_list = [np.array([0, 1])]  # 是 [0, 1] 没错
         # AB_list = [np.array([1, -(kx**2 - self.k0**2*self.n_list[-1]**2)**(1/2)])]
@@ -388,6 +388,7 @@ if __name__ == "__main__":
         )
         h_list = np.array([np.inf, w, np.inf])
 
+
     def 五层槽波导vandervoid():
         global lam0
         global n_list
@@ -402,6 +403,7 @@ if __name__ == "__main__":
         n_list = np.array([1, n_clad, 1, n_clad, 1])
         h_list = np.array([np.inf, w, d, w, np.inf])
 
+
     def 五层槽波导测试():
         global lam0
         global n_list
@@ -412,6 +414,7 @@ if __name__ == "__main__":
         n_list = np.array([1, 1.5, 1, 1.5, 1])
 
         h_list = np.array([np.inf, 180e-9, 50e-9, 180e-9, np.inf])
+
 
     n_list = 0
     lam0 = 0
@@ -424,7 +427,7 @@ if __name__ == "__main__":
     k0 = 2 * np.pi / lam0
     omega = 2 * np.pi * c0 / (1 * lam0)
 
-    epsilon_list = n_list**2
+    epsilon_list = n_list ** 2
     mu_list = np.ones(len(epsilon_list))
     polarization = "TM"
     h_sum = sum(h_list[1:-1])
@@ -435,7 +438,7 @@ if __name__ == "__main__":
     # plt.savefig("neff.svg")
     print("neff", neff)
     order = 2
-    from 从lumerical导出的数据画图 import main
+    # from 从lumerical导出的数据画图 import main
 
     plt.figure()
     # plt.plot(*main())
