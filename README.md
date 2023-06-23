@@ -1,2 +1,2 @@
-# tmm-py
-transfer matrix method with python
+# gallopy
+python code
