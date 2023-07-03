@@ -6,11 +6,10 @@ Created on Fri Mar  3 15:30:14 2023
 @e-mail: 2052760@tongji.edu.cn
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.signal import find_peaks  # 寻峰函数
-from numpy.linalg import inv
 
 plt.rcParams["xtick.direction"] = "in"
 plt.rcParams["ytick.direction"] = "in"
@@ -23,12 +22,15 @@ plt.rcParams["figure.dpi"] = 600
 plt.rcParams["legend.fancybox"] = False
 plt.rcParams["legend.framealpha"] = 1
 
-
 c0 = 299_792_458
 
 
 class TMMSolver(object):
+    
     def __init__(self, omega, epsilon_list, mu_list, h_list, polarization):
+        """
+        sadsd
+        """
         self.omega = omega
         self.epsilon_list = epsilon_list
         self.mu_list = mu_list
@@ -37,8 +39,13 @@ class TMMSolver(object):
         self.N = len(epsilon_list)
         self.n_list = np.sqrt(self.epsilon_list * self.mu_list)
         self.k0 = self.omega / c0
-
+    
     def get_M(self, kx):
+        """
+        asd
+        :param kx:
+        :return:
+        """
         k = self.epsilon_list * self.mu_list * self.omega ** 2 / c0 ** 2
         kz = np.sqrt(
             self.epsilon_list * self.mu_list * self.omega ** 2 / c0 ** 2
@@ -158,14 +165,14 @@ class TMMSolver(object):
         self.D_list = D_list
         self.P_list = P_list
         return M, M_list
-
+    
     def get_neff(self, num=1000, plot=False, strictly=True):
         n_begin = max(self.n_list[0], self.n_list[-1])
         n_end = max(self.n_list)
         kx_tilde_list = np.linspace(
             n_begin * (1 + 1e-8), n_end * (1 - 1e-8), num
         )
-
+        
         M11_abs_list = []
         M_all_list = []
         M_list_all_list = []
@@ -193,7 +200,7 @@ class TMMSolver(object):
                 neff_list.append(kx_tilde_list[peaks[i]])
                 M_return_list.append(M_all_list[peaks[i]])
                 M_list_return_list.append(M_list_all_list[peaks[i]])
-
+        
         # 画图
         if plot == True:
             plt.subplot().spines[["right", "top"]].set_visible(False)
@@ -209,7 +216,7 @@ class TMMSolver(object):
                     ha="left",
                     c="r",
                 )
-
+            
             # 画图的设置
             plt.ylim([0, 1])
             plt.xlim([n_begin, n_end])
@@ -220,7 +227,7 @@ class TMMSolver(object):
             # plt.spines['top'].set_visible(False)
             # plt.spines['right'].set_visible(False)
             plt.title("Eigen Mode for " + self.polarization)
-
+        
         # 将有效折射率从大到小排序
         # neff_list = np.flip(neff_list)
         # M_return_list = np.flip(M_return_list, axis=0)
@@ -229,12 +236,12 @@ class TMMSolver(object):
         M_return_list = M_return_list[::-1]
         M_list_return_list = M_list_return_list[::-1]
         # print("M_list_return_list", M_list_return_list)
-
+        
         # print(M_return_list)
-
+        
         # return neff_list, M11_abs_list, M_return_list, M_list_return_list[0,:]
         return neff_list, M11_abs_list, M_return_list, M_list_return_list
-
+    
     # def get_field(self, neff, plot=False):
     def get_field(
             self,
@@ -250,7 +257,7 @@ class TMMSolver(object):
         # print(M)
         kx_tilde = neff
         kx = kx_tilde * self.k0
-
+        
         k_list = self.n_list * self.k0
         # # +0j 是为了给负数开方得到复数
         kz_list = np.sqrt(k_list ** 2 - kx ** 2 + 0j)
@@ -309,7 +316,7 @@ class TMMSolver(object):
                             + AB_list[i][1]
                             * np.exp(1j * kz_list[i] * z_relative)
                         )
-
+        
         E_list = np.array(E_list)
         # E_list = E_list / max(E_list)
         # E_list = np.abs(E_list)
@@ -330,14 +337,14 @@ class TMMSolver(object):
             else:
                 fig, ax = plt.subplots()
                 # ax = plt.gca()
-
+                
                 ax.plot(
                     z_list - shift,
                     np.abs(E_list) / np.max(np.abs(E_list)),
                     color + "-",
                 )
                 # ax.plot(z_list, np.abs(E_list) / np.max(np.abs(E_list)), "r-")
-
+                
                 # ax.set_ylim(ylim)
                 ax.set_ylim((0, 1))
                 # ax.set_xlim(z_list[0], z_list[-1])
@@ -369,7 +376,7 @@ class TMMSolver(object):
 
 
 if __name__ == "__main__":
-
+    
     def 王健平板波导():
         global lam0
         global n_list
@@ -387,13 +394,13 @@ if __name__ == "__main__":
             ]
         )
         h_list = np.array([np.inf, w, np.inf])
-
-
+    
+    
     def 五层槽波导vandervoid():
         global lam0
         global n_list
         global h_list
-
+        
         lam0 = 1e-6
         # lam0 = 200
         w = 0.1 * lam0
@@ -402,31 +409,31 @@ if __name__ == "__main__":
         n_clad = 8
         n_list = np.array([1, n_clad, 1, n_clad, 1])
         h_list = np.array([np.inf, w, d, w, np.inf])
-
-
+    
+    
     def 五层槽波导测试():
         global lam0
         global n_list
         global h_list
-
+        
         lam0 = 589e-9
-
+        
         n_list = np.array([1, 1.5, 1, 1.5, 1])
-
+        
         h_list = np.array([np.inf, 180e-9, 50e-9, 180e-9, np.inf])
-
-
+    
+    
     n_list = 0
     lam0 = 0
     h_list = 0
-
+    
     王健平板波导()
     # 五层槽波导vandervoid()
     # 五层槽波导测试()
-
+    
     k0 = 2 * np.pi / lam0
     omega = 2 * np.pi * c0 / (1 * lam0)
-
+    
     epsilon_list = n_list ** 2
     mu_list = np.ones(len(epsilon_list))
     polarization = "TM"
@@ -439,7 +446,7 @@ if __name__ == "__main__":
     print("neff", neff)
     order = 2
     # from 从lumerical导出的数据画图 import main
-
+    
     plt.figure()
     # plt.plot(*main())
     for order, color in zip([0, 1], ["r", "b"]):
