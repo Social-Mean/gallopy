@@ -13,10 +13,16 @@ class FEMSolver1D(object):
     def __init__(self,
                  alpha_func: Union[Callable, Number],
                  beta_func: Union[Callable, Number],
-                 force_func: Union[Callable, Number]):
+                 force_func: Union[Callable, Number],
+                 p: Number,
+                 gamma: Number,
+                 q: Number):
         self.alpha_func = alpha_func
         self.beta_func = beta_func
         self.force_func = force_func
+        self.p = p
+        self.gamma = gamma
+        self.q = q
 
     def solve(self,
               x_array: ArrayLike) -> ArrayLike:
@@ -56,23 +62,24 @@ class FEMSolver1D(object):
         
         # 系数矩阵 K
         K_matrix = np.zeros((segments_num+1, segments_num+1))
-        for i in range(segments_num):
-            K_i = np.zeros((segments_num+1, segments_num+1))
-            K_i[i, i] = K_11[i]
-            K_i[i, i+1] = K_12[i]
-            K_i[i+1, i] = K_21[i]
-            K_i[i+1, i+1] = K_22[i]
-            
-            K_matrix += K_i
+        K_matrix[0, 0] = K_11[0]
+        K_matrix[-1, -1] = K_22[-1] + self.gamma
+        for i in range(1, segments_num):
+            K_matrix[i, i] = K_22[i-1] + K_11[i]
+            K_matrix[i, i-1] = K_12[i-1]
+            K_matrix[i-1, i] = K_12[i-1]
         K_matrix_sparse = dia_matrix(K_matrix)
         # 常数矩阵 b
         b_matrix = np.zeros(segments_num+1)
         b_matrix[0] = f[0] * ell[0] / 2
-        b_matrix[-1] = f[-1] * ell[-1] / 2
+        b_matrix[-1] = f[-1] * ell[-1] / 2 + self.q
         for i in range(1, segments_num):
             b_matrix[i] = b1[i-1] + b2[i]
         
         # y_array = inv(K_matrix) @ b_matrix
+        # K_matrix[0, 0] = 1
+        # K_matrix[0, 1] = 0
+        # b_matrix[0] = 0
         y_array = lsqr(K_matrix, b_matrix)[0]
         
         return y_array

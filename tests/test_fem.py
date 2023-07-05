@@ -13,7 +13,7 @@ class MyTestCase(unittest.TestCase):
         force_func = lambda x: x + 1
         alpha = -1
         beta = 0
-        solver = FEMSolver1D(alpha, beta, force_func)
+        solver = FEMSolver1D(alpha, beta, force_func, 0, 0, 1/3)
         
         x_array = np.linspace(0, 1)
         result = solver.solve(x_array)
