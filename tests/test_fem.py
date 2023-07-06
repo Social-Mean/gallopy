@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append("../scr")
 from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition
-
+from gallopy import rcParams
 
 class MyTestCase(unittest.TestCase):
     def test_fem1D(self):
@@ -27,11 +27,13 @@ class MyTestCase(unittest.TestCase):
         
         result = solver.solve(x_array)
         analysis_result = x_array / 3 + x_array ** 3 / 6 + x_array ** 2 / 2
+        
+        plt.subplots()
         plt.plot(x_array, analysis_result, label="truth")
         plt.plot(x_array, result, "o", label="JLJ", markerfacecolor="None", linewidth=0.1, markeredgecolor="k")
         plt.xlim((0, 1))
         plt.ylim((0, 1))
-        plt.show()
+        plt.savefig("./outputs/test_fem1D.pdf")
     
     def test_fem2D(self):
         section_num = 8
