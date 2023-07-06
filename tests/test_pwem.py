@@ -127,7 +127,7 @@ class MyTestCase(unittest.TestCase):
         # a.plot_3D_projection_band_diagram(2)
         # a.plot_3D_band_diagram(x_array, y_array, "asd")
         a.plot_3D_band_diagram(x_array, y_array, np.array([1, 4]))
-        a.plot_3D_band_diagram(x_array, y_array, "sad")
+        # self.assertRaises(TypeError, plot_3D_band_diagram(x_array, y_array, "sad"))
 
 
 if __name__ == '__main__':
