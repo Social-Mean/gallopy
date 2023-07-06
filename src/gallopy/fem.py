@@ -1,28 +1,34 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from typing import Union, Callable
+from typing import Union, Callable, Sequence
 from numbers import Number
 from numpy.typing import ArrayLike
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from scipy.sparse import dia_matrix
 from scipy.sparse.linalg import lsqr, spsolve
 from scipy.linalg import solve_banded, solveh_banded
+from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
 
+        
 
 class FEMSolver1D(object):
     def __init__(self,
                  alpha_func: Union[Callable, Number],
                  beta_func: Union[Callable, Number],
                  force_func: Union[Callable, Number],
-                 p: Number,
-                 gamma: Number,
-                 q: Number):
+                 boundary_conditions: Sequence[BoundaryCondition]):
         self.alpha_func = alpha_func
         self.beta_func = beta_func
         self.force_func = force_func
-        self.p = p
-        self.gamma = gamma
-        self.q = q
+        self.boundary_conditions = boundary_conditions
+        self.dirichlet_boundary_condition_list = []
+        self.neumann_boundary_condition_list = []
+        self.third_boundary_condition_list = []
+        for condition in self.boundary_conditions:
+            if isinstance(condition, DirichletBoundaryCondition):
+                self.dirichlet_boundary_condition_list.append(condition)
+            else:
+                pass
 
     def solve(self,
               x_array: ArrayLike) -> ArrayLike:
@@ -63,24 +69,37 @@ class FEMSolver1D(object):
         # 系数矩阵 K
         K_matrix = np.zeros((segments_num+1, segments_num+1))
         K_matrix[0, 0] = K_11[0]
-        K_matrix[-1, -1] = K_22[-1] + self.gamma
+        K_matrix[-1, -1] = K_22[-1]
         for i in range(1, segments_num):
             K_matrix[i, i] = K_22[i-1] + K_11[i]
-            K_matrix[i, i-1] = K_12[i-1]
-            K_matrix[i-1, i] = K_12[i-1]
+            # K_matrix[i, i-1] = K_21[i-1]
+            # K_matrix[i-1, i] = K_12[i-1]
+            K_matrix[i+1, i] = K_21[i]
+            K_matrix[i, i+1] = K_12[i]
         K_matrix_sparse = dia_matrix(K_matrix)
         # 常数矩阵 b
         b_matrix = np.zeros(segments_num+1)
         b_matrix[0] = f[0] * ell[0] / 2
-        b_matrix[-1] = f[-1] * ell[-1] / 2 + self.q
+        b_matrix[-1] = f[-1] * ell[-1] / 2
         for i in range(1, segments_num):
-            b_matrix[i] = b1[i-1] + b2[i]
+            b_matrix[i] = b2[i-1] + b1[i]
         
-        # y_array = inv(K_matrix) @ b_matrix
-        # K_matrix[0, 0] = 1
-        # K_matrix[0, 1] = 0
-        # b_matrix[0] = 0
-        y_array = lsqr(K_matrix, b_matrix)[0]
+        # 施加狄利克雷边界条件
+        index_list = []
+        for condition in self.dirichlet_boundary_condition_list:
+            # 找到边界条件对应的索引
+            index = np.argwhere(x_array == condition.x_val)
+            index_list.append(index)
+            K_matrix[index] = np.zeros(np.shape(K_matrix)[1])
+            K_matrix[index, index] = 1
+            # b_matrix -= K_matrix[:, 0] * condition.y_val
+            b_matrix[index] = condition.y_val
+        # for index in index_list:
+        #     b_matrix[index] = condition.y_val
+        
+        y_array = pinv(K_matrix) @ b_matrix
+        # y_array = lsqr(K_matrix, b_matrix)[0]
+        
         
         return y_array
     
