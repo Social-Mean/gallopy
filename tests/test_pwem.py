@@ -61,8 +61,8 @@ class MyTestCase(unittest.TestCase):
         a = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
         P = 5
         Q = 5
-        a.solve_2D(P, Q, "E", bloch_wave_vector)
-        a.plot_2D_band_diagram()
+        # a.solve_2D()
+        a.plot_path_band_diagram(P, Q, "E", bloch_wave_vector)
     
     def test_3D_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
@@ -113,20 +113,20 @@ class MyTestCase(unittest.TestCase):
         #     np.linspace(X_point, M_point, Nn2),
         #     np.linspace(M_point, Gamma_point, Nn3),
         #     [Gamma_point]])
-        bloch_num = 100
+        bloch_num = 50
         x_array = np.linspace(-T1[0], T1[0], bloch_num)
         y_array = np.linspace(-T2[1], T2[1], bloch_num)
         bloch_wave_vector = np.meshgrid(x_array, y_array)
-        a = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
+        solver = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
         P = 5
         Q = 5
-        a.solve_3D(P, Q, "E", bloch_wave_vector)
-        a.plot_3D_band_diagram(x_array, y_array, 1)
-        # a.plot_3D_projection_band_diagram(0)
+        # solver.solve_3D(P, Q, "E", bloch_wave_vector)
+        solver.plot_2D_band_diagram(P, Q, "E", bloch_wave_vector, [0, 1])
+        solver.plot_2D_projection_band_diagram(P, Q, "E", bloch_wave_vector, 0)
         # a.plot_3D_projection_band_diagram(1)
         # a.plot_3D_projection_band_diagram(2)
         # a.plot_3D_band_diagram(x_array, y_array, "asd")
-        a.plot_3D_band_diagram(x_array, y_array, np.array([1, 4]))
+        # a.plot_3D_band_diagram(x_array, y_array, np.array([1, 4]))
         # self.assertRaises(TypeError, plot_3D_band_diagram(x_array, y_array, "sad"))
 
 
