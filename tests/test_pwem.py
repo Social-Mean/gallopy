@@ -49,9 +49,9 @@ class MyTestCase(unittest.TestCase):
         T2 = np.array([0, 2*np.pi / lattice_constant])
 
         # 重要的路径点
-        Gamma_point = KeyPoint("\\Gamma", np.array([0, 0]))
-        X_point = KeyPoint("X", T1 / 2)
-        M_point = KeyPoint("M", T1 / 2 + T2 / 2)
+        Gamma_point = KeyPoint("$\\Gamma$", np.array([0, 0]))
+        X_point = KeyPoint("$X$", T1 / 2)
+        M_point = KeyPoint("$M$", T1 / 2 + T2 / 2)
         key_points = [Gamma_point, X_point, M_point]
         
         # bloch_wave_vector = np.concatenate([

@@ -11,9 +11,9 @@ from .matrix import convmat
 
 
 class KeyPoint(object):
-    def __init__(self, key_point_name: str, key_point_position: ArrayLike):
-        self.key_point_name = key_point_name
-        self.key_point_position = key_point_position
+    def __init__(self, name: str, position: ArrayLike):
+        self.name = name
+        self.position = position
 
 
 class PWEMSolver(object):
@@ -46,12 +46,12 @@ class PWEMSolver(object):
         # 绕路径一周
         for i in range(len(key_points)):
             if i != len(key_points) - 1:
-                new_vectors = np.linspace(key_points[i].key_point_position,
-                                                       key_points[i + 1].key_point_position,
-                                                       num)
+                new_vectors = np.linspace(key_points[i].position,
+                                          key_points[i + 1].position,
+                                          num)
             else:
-                new_vectors = np.linspace(key_points[-1].key_point_position,
-                                          key_points[0].key_point_position,
+                new_vectors = np.linspace(key_points[-1].position,
+                                          key_points[0].position,
                                           num)
             bloch_wave_vectors = np.array([*bloch_wave_vectors,
                                            *new_vectors]
@@ -67,7 +67,7 @@ class PWEMSolver(object):
         #                                            num))
         # 为了首位相连, 将起点附加到最后一项
         bloch_wave_vectors = np.array([*bloch_wave_vectors,
-                                       np.array(key_points[0].key_point_position)])
+                                       np.array(key_points[0].position)])
         # bloch_wave_vectors.append(np.array([key_points[0].key_point_position]))
         # bloch_wave_vectors = np.array(bloch_wave_vectors)
         # bloch_wave_vector = np.concatenate([
@@ -191,6 +191,13 @@ class PWEMSolver(object):
         # 标注 key_point
         for i in range(len(key_points)):
             plt.vlines(num * i, 0, 0.65, "grey", "--")
+        
+        tick_positions = np.array([0, 50, 100, 150])
+        tick_labels = []
+        for key_point in key_points:
+            tick_labels.append(key_point.name)
+        tick_labels.append(key_points[0].name)
+        plt.xticks(tick_positions, tick_labels)
         
         # diagram along a path, 沿路径画图
         for i in range(len(omega)):
