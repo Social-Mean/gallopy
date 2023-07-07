@@ -9,7 +9,6 @@ import numpy as np
 class MyTestCase(unittest.TestCase):
     def test_path_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
-        
         lattice_constant = 1
         radius = 0.35 * lattice_constant
         Nx = 101
@@ -29,22 +28,7 @@ class MyTestCase(unittest.TestCase):
                 distance_from_center = np.linalg.norm(this_pos - center_pos)
                 if distance_from_center > radius:
                     epsilon_r[i, j] = epsilon_2
-
-        
-        # 构造布洛赫波矢量
-        # 布洛赫矢量的总路程
-        path_distance = (1 + np.sqrt(2) / 2) * lattice_constant
-        # 布洛赫矢量取点的数量
-        # TODO 按照路径的相对长短自动分配取点的数量
-        Nn_each = 100
-        Nn1 = Nn_each
-        Nn2 = Nn_each
-        Nn3 = int(np.floor(1.5*Nn_each))
-        # 布洛赫矢量的步长
-        # bloch_step = path_distance / Nn
-        # 计算倒格矢
-        # t1 = np.array([lattice_constant, 0])
-        # t2 = np.array([0, lattice_constant])
+        # 倒格矢
         T1 = np.array([2*np.pi / lattice_constant, 0])
         T2 = np.array([0, 2*np.pi / lattice_constant])
 
@@ -54,17 +38,14 @@ class MyTestCase(unittest.TestCase):
         M_point = KeyPoint("$M$", T1 / 2 + T2 / 2)
         key_points = [Gamma_point, X_point, M_point]
         
-        # bloch_wave_vector = np.concatenate([
-        #     np.linspace(Gamma_point, X_point, Nn1),
-        #     np.linspace(X_point, M_point, Nn2),
-        #     np.linspace(M_point, Gamma_point, Nn3),
-        #     [Gamma_point]])
-        # print(bloch_wave_vector)
-        a = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
+ 
+        solver = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
         P = 5
         Q = 5
-        # a.solve_2D()
-        a.plot_path_band_diagram(P, Q, "E", key_points)
+        
+        fig, ax = solver.plot_path_band_diagram(P, Q, "E", key_points, 1000)
+        # ax.set_ylim(ymax=1.4)
+        fig.savefig("./outputs/2D_band_diagram.pdf")
     
     def test_2D_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0

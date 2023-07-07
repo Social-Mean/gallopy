@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import eigh
 from . import rcParams
 from .matrix import convmat
+from matplotlib import patches, collections
 
 
 class KeyPoint(object):
@@ -18,23 +19,9 @@ class KeyPoint(object):
 
 class PWEMSolver(object):
     def __init__(self, epsilon_r, mu_r, lattice_constant):
-        """
-        
-        :param epsilon_r:
-        :param mu_r:
-        :param bloch_wave_vectors:
-        :param lattice_constant:
-        """
         self.epsilon_r = epsilon_r
         self.mu_r = mu_r
         self.lattice_constant = lattice_constant
-    
-    # @property
-    # def bloch_wave_vectors(self):
-    #     return self._bloch_wave_vectors
-    #
-    # @bloch_wave_vectors.setter
-    # def bloch_wave_vectors(self, ):
     
     def solve_path(self,
                    P: int,
@@ -48,6 +35,14 @@ class PWEMSolver(object):
         # 总的空间谐波数
         spatial_harmonic_wave_num = P * Q
         
+        distance_list = np.zeros(len(key_points))
+        for i in range(len(key_points)):
+            j = i + 1 if i + 1 < len(key_points) else 0
+            tmp_vec = key_points[i].position - key_points[j].position
+            distance_list[i] = np.linalg.norm(tmp_vec)
+        distance_total = np.sum(distance_list)
+        ratio_list = distance_list / distance_total
+        
         if isinstance(num, Sequence):
             if len(num) == len(key_points):
                 num_list = num
@@ -55,17 +50,15 @@ class PWEMSolver(object):
                 raise ValueError("当前输入的 num 是一个数组, 需要保证 num 与 key_points 具有相同的长度.")
         else:  # 如果 num 不是一个数组, 则是总的采样点的数量
             # 计算每段路径的长度
-            distance_list = np.zeros(len(key_points))
-            for i in range(len(key_points)):
-                j = i + 1 if i + 1 < len(key_points) else 0
-                tmp_vec = key_points[i].position - key_points[j].position
-                distance_list[i] = np.linalg.norm(tmp_vec)
-            distance_total = np.sum(distance_list)
-            ratio_list = distance_list / distance_total
             num_list = np.ceil(ratio_list * num).astype(int)
-            
-        
-        
+        distance_array = np.empty(0)
+        for i in range(len(key_points)):
+            distance_array = np.concatenate([distance_array,
+                                             np.linspace(np.sum(distance_list[:i]),
+                                                         np.sum(distance_list[:i + 1]),
+                                                         num_list[i],
+                                                         endpoint=False)])
+        distance_array = np.append(distance_array, distance_total)
         
         # 初始化布洛赫波矢
         bloch_wave_vectors = np.zeros((0, 2))
@@ -75,11 +68,11 @@ class PWEMSolver(object):
             if i != len(key_points) - 1:
                 new_vectors = np.linspace(key_points[i].position,
                                           key_points[i + 1].position,
-                                          num)
+                                          num, endpoint=False)
             else:
                 new_vectors = np.linspace(key_points[-1].position,
                                           key_points[0].position,
-                                          num)
+                                          num, endpoint=False)
             bloch_wave_vectors = np.array([*bloch_wave_vectors,
                                            *new_vectors])
         # 为了首位相连, 将起点附加到最后一项
@@ -133,8 +126,10 @@ class PWEMSolver(object):
                 # k0 = np.real(np.sqrt(k0)) / params.norm;
                 # W[:, nbeta] = k0;
                 pass
-        
-        return num_list, omega
+        if return_num_list:
+            return distance_array, omega, num_list
+        else:
+            return distance_array, omega
     
     def solve_2D(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
         # TODO: 画 3D 图时, bloch 波矢与结构有关, 应当自动生成
@@ -194,38 +189,49 @@ class PWEMSolver(object):
         
         return omega
     
-    def plot_path_band_diagram(self, P: int, Q: int, mode, key_points: Sequence[KeyPoint], num: int = 50):
-        num_list, omega = self.solve_path(P, Q, mode, key_points, num, return_num_list=True)
-        plt.figure()
+    def plot_path_band_diagram(self,
+                               P: int,
+                               Q: int,
+                               mode,
+                               key_points: Sequence[KeyPoint],
+                               num: Union[int, Sequence] = 50,
+                               show_bandgap=True):
         
-    
+        distance_array, omega, num_list = self.solve_path(P, Q, mode, key_points, num, return_num_list=True)
         
-        tick_positions = np.zeros(len(key_points)+1)
+        tick_positions = np.zeros(len(key_points) + 1, dtype=int)
         tick_positions[0] = 0
-        for i in range(1, len(num_list)+1):
-            tick_positions[i] = tick_positions[i-1] + num_list[i-1]
+        for i in range(1, len(num_list) + 1):
+            tick_positions[i] = tick_positions[i - 1] + num_list[i - 1]
         
         tick_labels = []
         for key_point in key_points:
             tick_labels.append(key_point.name)
         tick_labels.append(key_points[0].name)
-        plt.xticks(tick_positions, tick_labels)
         
-        # 标注 key_point
-        plt.vlines(tick_positions, 0, 0.65, "grey", "--")
-        # diagram along a path, 沿路径画图
-        num_array = np.arange(np.sum(num_list)+1)
+        # diagram along the path, 沿路径画图
+        fig, ax = plt.subplots()
+        
         for i in range(len(omega)):
-            plt.plot(num_array, omega[i], "k")
+            ax.plot(distance_array,
+                    omega[i],
+                    "k",
+                    markerfacecolor="None",
+                    # linewidth=1,
+                    zorder=1)
+        if show_bandgap:
+            self.show_path_bandgap(ax, distance_array, omega)
+        # plot settings
+        ax.set_ylim(ymin=0)
+        # 标注 key_point
+        ax.vlines(distance_array[tick_positions[1:-1]], 0, ax.get_ylim()[1], "grey", "--", zorder=0)
         
-        
-        
-        plt.ylim((0, 0.65))
-        plt.xlim((0, np.shape(omega)[1] - 1))
-        plt.ylabel("$k_0^2$")
-        plt.xlabel("Array index of Bloch wave vector $\\vec \\beta$")
-        plt.title("Path Band Diagram")
-        plt.savefig("./outputs/2D_band_diagram.pdf")
+        ax.set_xticks(distance_array[tick_positions], tick_labels)
+        ax.set_xlim((0, distance_array[-1]))
+        ax.set_ylabel("$k_0^2$")
+        ax.set_xlabel("$\\vec \\beta$")
+        ax.set_title("Path Band Diagram")
+        return fig, ax
     
     def plot_2D_projection_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: int,
                                         cmap="rainbow"):
@@ -308,3 +314,22 @@ class PWEMSolver(object):
         # ax.xaxis.set_transform(ax.xaxis.get_transform() + offset)
         ax.tick_params(axis='both', which='major', labelsize=6)
         # ax.set
+    
+    def show_path_bandgap(self, ax, distance_array, omega, fineness=1e-3):
+        min_array = np.min(omega, axis=1)
+        max_array = np.max(omega, axis=1)
+        recoder = []
+        for i in range(np.shape(omega)[0] - 1):
+            if min_array[i + 1] - max_array[i] > fineness:
+                recoder.append([max_array[i], min_array[i + 1]])
+        
+        for item in recoder:
+            rect = patches.Rectangle((0, item[0]),
+                                     distance_array[-1],
+                                     item[1] - item[0],
+                                     facecolor="yellow",
+                                     edgecolor="None",
+                                     alpha=0.8,
+                                     zorder=2)
+            
+            ax.add_patch(rect)
