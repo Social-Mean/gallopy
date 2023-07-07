@@ -7,7 +7,7 @@ import numpy as np
 
 
 class MyTestCase(unittest.TestCase):
-    def test_2D_band_diagram(self):
+    def test_path_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
         
         lattice_constant = 1
@@ -66,7 +66,7 @@ class MyTestCase(unittest.TestCase):
         # a.solve_2D()
         a.plot_path_band_diagram(P, Q, "E", key_points)
     
-    def test_3D_band_diagram(self):
+    def test_2D_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
         
         lattice_constant = 1

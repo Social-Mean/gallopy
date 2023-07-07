@@ -36,15 +36,42 @@ class PWEMSolver(object):
     # @bloch_wave_vectors.setter
     # def bloch_wave_vectors(self, ):
     
-    def solve_path(self, P: int, Q: int, mode, key_points: Sequence[KeyPoint], num: int = 50):
+    def solve_path(self,
+                   P: int,
+                   Q: int,
+                   mode,
+                   key_points: Sequence[KeyPoint],
+                   num: Union[int, Sequence] = 50,
+                   *,
+                   return_num_list: bool = False):
         
         # 总的空间谐波数
         spatial_harmonic_wave_num = P * Q
         
-        # 布洛赫波矢
+        if isinstance(num, Sequence):
+            if len(num) == len(key_points):
+                num_list = num
+            else:
+                raise ValueError("当前输入的 num 是一个数组, 需要保证 num 与 key_points 具有相同的长度.")
+        else:  # 如果 num 不是一个数组, 则是总的采样点的数量
+            # 计算每段路径的长度
+            distance_list = np.zeros(len(key_points))
+            for i in range(len(key_points)):
+                j = i + 1 if i + 1 < len(key_points) else 0
+                tmp_vec = key_points[i].position - key_points[j].position
+                distance_list[i] = np.linalg.norm(tmp_vec)
+            distance_total = np.sum(distance_list)
+            ratio_list = distance_list / distance_total
+            num_list = np.ceil(ratio_list * num).astype(int)
+            
+        
+        
+        
+        # 初始化布洛赫波矢
         bloch_wave_vectors = np.zeros((0, 2))
         # 绕路径一周
         for i in range(len(key_points)):
+            num = num_list[i]
             if i != len(key_points) - 1:
                 new_vectors = np.linspace(key_points[i].position,
                                           key_points[i + 1].position,
@@ -54,27 +81,10 @@ class PWEMSolver(object):
                                           key_points[0].position,
                                           num)
             bloch_wave_vectors = np.array([*bloch_wave_vectors,
-                                           *new_vectors]
-                                           )
-            # bloch_wave_vectors.append(np.linspace(key_points[i].key_point_position,
-            #                                             key_points[i + 1].key_point_position,
-            #                                             num))
-        
-        # bloch_wave_vectors = np.append(bloch_wave_vectors, new_vectors
-        #                                )
-        # bloch_wave_vectors.append(np.linspace(key_points[-1].key_point_position,
-        #                                            key_points[0].key_point_position,
-        #                                            num))
+                                           *new_vectors])
         # 为了首位相连, 将起点附加到最后一项
         bloch_wave_vectors = np.array([*bloch_wave_vectors,
                                        np.array(key_points[0].position)])
-        # bloch_wave_vectors.append(np.array([key_points[0].key_point_position]))
-        # bloch_wave_vectors = np.array(bloch_wave_vectors)
-        # bloch_wave_vector = np.concatenate([
-        #     np.linspace(Gamma_point, X_point, Nn1),
-        #     np.linspace(X_point, M_point, Nn2),
-        #     np.linspace(M_point, Gamma_point, Nn3),
-        #     [Gamma_point]])
         
         bx = bloch_wave_vectors[:, 0]
         by = bloch_wave_vectors[:, 1]
@@ -124,7 +134,7 @@ class PWEMSolver(object):
                 # W[:, nbeta] = k0;
                 pass
         
-        return omega
+        return num_list, omega
     
     def solve_2D(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
         # TODO: 画 3D 图时, bloch 波矢与结构有关, 应当自动生成
@@ -185,23 +195,28 @@ class PWEMSolver(object):
         return omega
     
     def plot_path_band_diagram(self, P: int, Q: int, mode, key_points: Sequence[KeyPoint], num: int = 50):
-        omega = self.solve_path(P, Q, mode, key_points, num)
+        num_list, omega = self.solve_path(P, Q, mode, key_points, num, return_num_list=True)
         plt.figure()
         
-        # 标注 key_point
-        for i in range(len(key_points)):
-            plt.vlines(num * i, 0, 0.65, "grey", "--")
+    
         
-        tick_positions = np.array([0, 50, 100, 150])
+        tick_positions = np.zeros(len(key_points)+1)
+        tick_positions[0] = 0
+        for i in range(1, len(num_list)+1):
+            tick_positions[i] = tick_positions[i-1] + num_list[i-1]
+        
         tick_labels = []
         for key_point in key_points:
             tick_labels.append(key_point.name)
         tick_labels.append(key_points[0].name)
         plt.xticks(tick_positions, tick_labels)
         
+        # 标注 key_point
+        plt.vlines(tick_positions, 0, 0.65, "grey", "--")
         # diagram along a path, 沿路径画图
+        num_array = np.arange(np.sum(num_list)+1)
         for i in range(len(omega)):
-            plt.plot(omega[i], "k")
+            plt.plot(num_array, omega[i], "k")
         
         
         
@@ -233,7 +248,7 @@ class PWEMSolver(object):
         # TODO: x_array 和 y_array 与结构有关, 应当自动生成
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         
-        if isinstance(level, int):
+        if isinstance(level, int):  # TODO: 如果 level 是 int, 则画出投影等高线图
             ax.plot_surface(*bloch_wave_vectors, omega[level], alpha=.6, cmap="rainbow")
         elif isinstance(level, Iterable):  # FIXME: 没有判断可迭代对象的元素类型
             for level_i in level:
