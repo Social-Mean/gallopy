@@ -20,7 +20,8 @@ class MyTestCase(unittest.TestCase):
         #                           np.linspace(0.5, 1, node_num)])
         
         condition = [DirichletBoundaryCondition(0, 0),
-                     DirichletBoundaryCondition(1, 1)]
+                     DirichletBoundaryCondition(1, 1),
+                     DirichletBoundaryCondition(0.3, 0.5)]
         # condition.append(DirichletBoundaryCondition(x_array[20], .6))
         
         solver = FEMSolver1D(alpha, beta, force_func, condition)
@@ -31,8 +32,8 @@ class MyTestCase(unittest.TestCase):
         plt.subplots()
         plt.plot(x_array, analysis_result, label="truth")
         plt.plot(x_array, result, "o", label="JLJ", markerfacecolor="None", linewidth=0.1, markeredgecolor="k")
-        plt.xlim((0, 1))
-        plt.ylim((0, 1))
+        plt.xlim((min(x_array), max(x_array)))
+        plt.ylim((min(analysis_result), max(analysis_result)))
         plt.savefig("./outputs/test_fem1D.pdf")
     
     def test_fem2D(self):
