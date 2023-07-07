@@ -47,22 +47,24 @@ class MyTestCase(unittest.TestCase):
         # t2 = np.array([0, lattice_constant])
         T1 = np.array([2*np.pi / lattice_constant, 0])
         T2 = np.array([0, 2*np.pi / lattice_constant])
+
         # 重要的路径点
-        Gamma_point = np.array([0, 0])
-        X_point = T1 / 2
-        M_point = T1 / 2 + T2 / 2
+        Gamma_point = KeyPoint("\\Gamma", np.array([0, 0]))
+        X_point = KeyPoint("X", T1 / 2)
+        M_point = KeyPoint("M", T1 / 2 + T2 / 2)
+        key_points = [Gamma_point, X_point, M_point]
         
-        bloch_wave_vector = np.concatenate([
-            np.linspace(Gamma_point, X_point, Nn1),
-            np.linspace(X_point, M_point, Nn2),
-            np.linspace(M_point, Gamma_point, Nn3),
-            [Gamma_point]])
+        # bloch_wave_vector = np.concatenate([
+        #     np.linspace(Gamma_point, X_point, Nn1),
+        #     np.linspace(X_point, M_point, Nn2),
+        #     np.linspace(M_point, Gamma_point, Nn3),
+        #     [Gamma_point]])
         # print(bloch_wave_vector)
         a = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
         P = 5
         Q = 5
         # a.solve_2D()
-        a.plot_path_band_diagram(P, Q, "E", bloch_wave_vector)
+        a.plot_path_band_diagram(P, Q, "E", key_points)
     
     def test_3D_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
@@ -103,11 +105,8 @@ class MyTestCase(unittest.TestCase):
         # t2 = np.array([0, lattice_constant])
         T1 = np.array([2 * np.pi / lattice_constant, 0])
         T2 = np.array([0, 2 * np.pi / lattice_constant])
-        # 重要的路径点
-        Gamma_point = KeyPoint("\\Gamma", np.array([0, 0]))
-        X_point = KeyPoint("X", T1 / 2)
-        M_point = KeyPoint("M", T1 / 2 + T2 / 2)
-        key_points = [Gamma_point, X_point, M_point]
+
+        
         # bloch_wave_vector = np.concatenate([
         #     np.linspace(Gamma_point, X_point, Nn1),
         #     np.linspace(X_point, M_point, Nn2),
@@ -121,7 +120,7 @@ class MyTestCase(unittest.TestCase):
         P = 5
         Q = 5
         # solver.solve_3D(P, Q, "E", bloch_wave_vector)
-        solver.plot_2D_band_diagram(P, Q, "E", key_points, [0, 1])
+        solver.plot_2D_band_diagram(P, Q, "E", bloch_wave_vector, [0, 1])
         solver.plot_2D_projection_band_diagram(P, Q, "E", bloch_wave_vector, 0)
         # a.plot_3D_projection_band_diagram(1)
         # a.plot_3D_projection_band_diagram(2)

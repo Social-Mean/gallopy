@@ -36,12 +36,46 @@ class PWEMSolver(object):
     # @bloch_wave_vectors.setter
     # def bloch_wave_vectors(self, ):
     
-    def solve_path(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
+    def solve_path(self, P: int, Q: int, mode, key_points: Sequence[KeyPoint], num: int = 50):
         
         # 总的空间谐波数
         spatial_harmonic_wave_num = P * Q
         
         # 布洛赫波矢
+        bloch_wave_vectors = np.zeros((0, 2))
+        # 绕路径一周
+        for i in range(len(key_points)):
+            if i != len(key_points) - 1:
+                new_vectors = np.linspace(key_points[i].key_point_position,
+                                                       key_points[i + 1].key_point_position,
+                                                       num)
+            else:
+                new_vectors = np.linspace(key_points[-1].key_point_position,
+                                          key_points[0].key_point_position,
+                                          num)
+            bloch_wave_vectors = np.array([*bloch_wave_vectors,
+                                           *new_vectors]
+                                           )
+            # bloch_wave_vectors.append(np.linspace(key_points[i].key_point_position,
+            #                                             key_points[i + 1].key_point_position,
+            #                                             num))
+        
+        # bloch_wave_vectors = np.append(bloch_wave_vectors, new_vectors
+        #                                )
+        # bloch_wave_vectors.append(np.linspace(key_points[-1].key_point_position,
+        #                                            key_points[0].key_point_position,
+        #                                            num))
+        # 为了首位相连, 将起点附加到最后一项
+        bloch_wave_vectors = np.array([*bloch_wave_vectors,
+                                       np.array(key_points[0].key_point_position)])
+        # bloch_wave_vectors.append(np.array([key_points[0].key_point_position]))
+        # bloch_wave_vectors = np.array(bloch_wave_vectors)
+        # bloch_wave_vector = np.concatenate([
+        #     np.linspace(Gamma_point, X_point, Nn1),
+        #     np.linspace(X_point, M_point, Nn2),
+        #     np.linspace(M_point, Gamma_point, Nn3),
+        #     [Gamma_point]])
+        
         bx = bloch_wave_vectors[:, 0]
         by = bloch_wave_vectors[:, 1]
         
@@ -89,7 +123,6 @@ class PWEMSolver(object):
                 # k0 = np.real(np.sqrt(k0)) / params.norm;
                 # W[:, nbeta] = k0;
                 pass
-        
         
         return omega
     
@@ -151,13 +184,20 @@ class PWEMSolver(object):
         
         return omega
     
-    def plot_path_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
-        omega = self.solve_path(P, Q, mode, bloch_wave_vectors)
+    def plot_path_band_diagram(self, P: int, Q: int, mode, key_points: Sequence[KeyPoint], num: int = 50):
+        omega = self.solve_path(P, Q, mode, key_points, num)
         plt.figure()
+        
+        # 标注 key_point
+        for i in range(len(key_points)):
+            plt.vlines(num * i, 0, 0.65, "grey", "--")
         
         # diagram along a path, 沿路径画图
         for i in range(len(omega)):
             plt.plot(omega[i], "k")
+        
+        
+        
         plt.ylim((0, 0.65))
         plt.xlim((0, np.shape(omega)[1] - 1))
         plt.ylabel("$k_0^2$")
@@ -165,10 +205,12 @@ class PWEMSolver(object):
         plt.title("Path Band Diagram")
         plt.savefig("./outputs/2D_band_diagram.pdf")
     
-    def plot_2D_projection_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: int, cmap="rainbow"):
+    def plot_2D_projection_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: int,
+                                        cmap="rainbow"):
         omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
         fig, ax = plt.subplots()
-        im = ax.pcolormesh(*bloch_wave_vectors, omega[level], linewidth=0, rasterized=True, cmap=cmap, shading="gouraud")
+        im = ax.pcolormesh(*bloch_wave_vectors, omega[level], linewidth=0, rasterized=True, cmap=cmap,
+                           shading="gouraud")
         ax.set_box_aspect(1)
         cb = fig.colorbar(im, ax=ax)
         cb.ax.set_title("$\\omega$")
@@ -178,11 +220,12 @@ class PWEMSolver(object):
         ax.set_title("2D Projection Band Diagram")
         fig.savefig("./outputs/3D_projection_band_diagram.pdf")
     
-    def plot_2D_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: Union[int, Sequence[int]] = None):
+    def plot_2D_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence,
+                             level: Union[int, Sequence[int]] = None):
         omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
         # TODO: x_array 和 y_array 与结构有关, 应当自动生成
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-
+        
         if isinstance(level, int):
             ax.plot_surface(*bloch_wave_vectors, omega[level], alpha=.6, cmap="rainbow")
         elif isinstance(level, Iterable):  # FIXME: 没有判断可迭代对象的元素类型
@@ -208,7 +251,7 @@ class PWEMSolver(object):
         ax.set_zlabel("$\\omega$")
         ax.set_title("2D Band Diagram")
         fig.savefig("./outputs/3D_band_diagram.pdf")
-        
+    
     def _set_ticks_range(self, ax, bloch_wave_vectors):
         x_array, y_array = bloch_wave_vectors
         x_array = x_array[0]
@@ -224,7 +267,7 @@ class PWEMSolver(object):
         
         ax.set_xlim((x_array[0], x_array[-1]))
         ax.set_ylim((y_array[0], y_array[-1]))
-        
+    
     def _set_3d_ticks(self, fig, ax):
         ax.xaxis.set_tick_params(rotation=45)
         ax.yaxis.set_tick_params(rotation=-15)
@@ -243,4 +286,3 @@ class PWEMSolver(object):
         # ax.xaxis.set_transform(ax.xaxis.get_transform() + offset)
         ax.tick_params(axis='both', which='major', labelsize=6)
         # ax.set
-        
