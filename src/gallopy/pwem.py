@@ -68,7 +68,7 @@ class PWEMSolver(object):
     # @bloch_wave_vectors.setter
     # def bloch_wave_vectors(self, ):
     
-    def solve_2D(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
+    def solve_path(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
         
         # 总的空间谐波数
         spatial_harmonic_wave_num = P * Q
@@ -109,7 +109,7 @@ class PWEMSolver(object):
                 
                 omega[:, n] = self.lattice_constant / (2 * np.pi) * np.real(np.sqrt(k0_square + 0j))
                 # omega[:, n] = k0_square
-            
+            # TODO: H mode
             else:  # mode == "H"
                 # A = Kx @ np.linalg.inv(ERC) @ Kx + Ky @ np.linalg.inv(ERC) @ Ky;
                 #
@@ -125,7 +125,7 @@ class PWEMSolver(object):
         
         return omega
     
-    def solve_3D(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
+    def solve_2D(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
         # TODO: 画 3D 图时, bloch 波矢与结构有关, 应当自动生成
         
         # 总的空间谐波数
@@ -168,7 +168,7 @@ class PWEMSolver(object):
                     
                     omega[:, i, j] = self.lattice_constant / (2 * np.pi) * np.real(np.sqrt(k0_square + 0j))
                     # omega[:, n] = k0_square
-                
+                # TODO: H mode
                 else:  # mode == "H"
                     # A = Kx @ np.linalg.inv(ERC) @ Kx + Ky @ np.linalg.inv(ERC) @ Ky;
                     #
@@ -184,7 +184,7 @@ class PWEMSolver(object):
         return omega
     
     def plot_path_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence):
-        omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
+        omega = self.solve_path(P, Q, mode, bloch_wave_vectors)
         plt.figure()
         
         # diagram along a path, 沿路径画图
@@ -198,7 +198,7 @@ class PWEMSolver(object):
         plt.savefig("./outputs/2D_band_diagram.pdf")
     
     def plot_2D_projection_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: int, cmap="rainbow"):
-        omega = self.solve_3D(P, Q, mode, bloch_wave_vectors)
+        omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
         fig, ax = plt.subplots()
         im = ax.pcolormesh(*bloch_wave_vectors, omega[level], linewidth=0, rasterized=True, cmap=cmap, shading="gouraud")
         ax.set_box_aspect(1)
@@ -211,7 +211,7 @@ class PWEMSolver(object):
         fig.savefig("./outputs/3D_projection_band_diagram.pdf")
     
     def plot_2D_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: Union[int, Sequence[int]] = None):
-        omega = self.solve_3D(P, Q, mode, bloch_wave_vectors)
+        omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
         # TODO: x_array 和 y_array 与结构有关, 应当自动生成
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 
