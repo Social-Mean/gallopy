@@ -2,7 +2,7 @@ import unittest
 
 import matplotlib.pyplot as plt
 
-from gallopy.pwem import PWEMSolver
+from gallopy.pwem import PWEMSolver, KeyPoint
 import numpy as np
 
 
@@ -104,10 +104,10 @@ class MyTestCase(unittest.TestCase):
         T1 = np.array([2 * np.pi / lattice_constant, 0])
         T2 = np.array([0, 2 * np.pi / lattice_constant])
         # 重要的路径点
-        Gamma_point = np.array([0, 0])
-        X_point = T1 / 2
-        M_point = T1 / 2 + T2 / 2
-        
+        Gamma_point = KeyPoint("\\Gamma", np.array([0, 0]))
+        X_point = KeyPoint("X", T1 / 2)
+        M_point = KeyPoint("M", T1 / 2 + T2 / 2)
+        key_points = [Gamma_point, X_point, M_point]
         # bloch_wave_vector = np.concatenate([
         #     np.linspace(Gamma_point, X_point, Nn1),
         #     np.linspace(X_point, M_point, Nn2),
@@ -121,7 +121,7 @@ class MyTestCase(unittest.TestCase):
         P = 5
         Q = 5
         # solver.solve_3D(P, Q, "E", bloch_wave_vector)
-        solver.plot_2D_band_diagram(P, Q, "E", bloch_wave_vector, [0, 1])
+        solver.plot_2D_band_diagram(P, Q, "E", key_points, [0, 1])
         solver.plot_2D_projection_band_diagram(P, Q, "E", bloch_wave_vector, 0)
         # a.plot_3D_projection_band_diagram(1)
         # a.plot_3D_projection_band_diagram(2)

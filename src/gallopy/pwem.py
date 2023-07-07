@@ -2,50 +2,18 @@ from typing import Sequence, Union
 from collections.abc import Iterable
 import matplotlib as mpl
 import numpy as np
+from numpy.typing import ArrayLike
 from numpy.fft import fftshift, fftn
 import matplotlib.pyplot as plt
 from scipy.linalg import eigh
 from . import rcParams
 from .matrix import convmat
-# def convmat(A, P, Q):
-#     # Extract spatial harmonics (P, Q, R) of a general 3D unit cell
-#
-#     # Extract shape of an array
-#
-#     Nx, Ny = np.shape(A)
-#
-#     # Spatial harmonic indices
-#
-#     NH = P * Q  # Total num of spatial harmonics
-#
-#     p = np.array(np.arange(-np.floor(P / 2), np.floor(P / 2) + 1))  # Idx in x dir
-#     q = np.array(np.arange(-np.floor(Q / 2), np.floor(Q / 2) + 1))  # Idx in y dir
-#
-#     # Array indices for the zeroth harmonic
-#
-#     p_0 = int(np.floor(Nx / 2))  # add +1 in matlab
-#
-#     q_0 = int(np.floor(Ny / 2))
-#
-#     # Fourier coefficients of A
-#
-#     A = fftshift(fftn(A) / (Nx * Ny))  # Ordered Fourier coeffs
-#
-#     # Init Convolution matrix;
-#
-#     C = np.zeros((NH, NH), dtype='complex')
-#
-#     # Looping
-#     for q_row in range(1, Q + 1):
-#         for p_row in range(1, P + 1):
-#             row = (q_row - 1) * P + p_row
-#             for q_col in range(1, Q + 1):
-#                 for p_col in range(1, P + 1):
-#                     col = (q_col - 1) * P + p_col
-#                     p_fft = int(p[p_row - 1] - p[p_col - 1])  # cut - 1 in matlab
-#                     q_fft = int(q[q_row - 1] - q[q_col - 1])
-#                     C[row - 1, col - 1] = A[p_0 + p_fft, q_0 + q_fft]
-#     return C
+
+
+class KeyPoint(object):
+    def __init__(self, key_point_name: str, key_point_position: ArrayLike):
+        self.key_point_name = key_point_name
+        self.key_point_position = key_point_position
 
 
 class PWEMSolver(object):
