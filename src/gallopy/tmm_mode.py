@@ -10,17 +10,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks  # 寻峰函数
-
-plt.rcParams["xtick.direction"] = "in"
-plt.rcParams["ytick.direction"] = "in"
-plt.rcParams["font.sans-serif"] = "Times New Roman"
-plt.rcParams["text.usetex"] = False
-plt.rcParams["mathtext.fontset"] = "stix"
-plt.rcParams["figure.autolayout"] = True
-plt.rcParams["savefig.transparent"] = True
-plt.rcParams["figure.dpi"] = 600
-plt.rcParams["legend.fancybox"] = False
-plt.rcParams["legend.framealpha"] = 1
+from . import rcParams
 
 c0 = 299_792_458
 
