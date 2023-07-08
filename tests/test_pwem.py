@@ -44,7 +44,6 @@ class MyTestCase(unittest.TestCase):
         Q = 5
         
         fig, ax = solver.plot_path_band_diagram(P, Q, "E", key_points, 1000)
-        # ax.set_ylim(ymax=1.4)
         fig.savefig("./outputs/path_band_diagram.pdf")
     
     def test_2D_band_diagram(self):
@@ -69,7 +68,7 @@ class MyTestCase(unittest.TestCase):
                 distance_from_center = np.linalg.norm(this_pos - center_pos)
                 if distance_from_center > radius:
                     epsilon_r[i, j] = epsilon_2
-        
+        # epsilon_r[32:40, 57:70] = 60
         # 构造布洛赫波矢量
         # 布洛赫矢量的总路程
         path_distance = (1 + np.sqrt(2) / 2) * lattice_constant
@@ -101,8 +100,11 @@ class MyTestCase(unittest.TestCase):
         P = 5
         Q = 5
         # solver.solve_3D(P, Q, "E", bloch_wave_vector)
-        solver.plot_2D_band_diagram(P, Q, "E", bloch_wave_vector, [0, 1])
-        solver.plot_2D_projection_band_diagram(P, Q, "E", bloch_wave_vector, 0)
+        fig, ax = solver.plot_2D_band_diagram(P, Q, "E", bloch_wave_vector, [0, 1])
+        fig.savefig("./outputs/2D_band_diagram.pdf")
+        
+        fig, ax = solver.plot_2D_projection_band_diagram(P, Q, "E", bloch_wave_vector, 0)
+        fig.savefig("./outputs/2D_projection_band_diagram.pdf")
         # a.plot_3D_projection_band_diagram(1)
         # a.plot_3D_projection_band_diagram(2)
         # a.plot_3D_band_diagram(x_array, y_array, "asd")

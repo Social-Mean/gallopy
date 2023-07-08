@@ -256,11 +256,15 @@ class PWEMSolver(object):
         ax.set_box_aspect(1)
         cb = fig.colorbar(im, ax=ax)
         cb.ax.set_title("$\\frac{\\omega a}{2\\pi c_0}$")
-        self._set_ticks_range(ax, bloch_wave_vectors)
+        # self._set_ticks_range(ax, bloch_wave_vectors)
+        tmp_len = np.pi/self.lattice_constant
+        ax.set_xticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
+        ax.set_yticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
+        
         ax.set_xlabel("$\\beta_x$")
-        ax.set_ylabel("$\\beta_y$")
+        ax.set_ylabel("$\\beta_y$", rotation=0)
         ax.set_title(f"2D Projection Band Diagram of Level {level}")
-        fig.savefig("./outputs/3D_projection_band_diagram.pdf")
+        # fig.savefig("./outputs/3D_projection_band_diagram.pdf")
         return fig, ax
     
     def plot_2D_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence,
@@ -269,6 +273,7 @@ class PWEMSolver(object):
         z_array = omega * self.lattice_constant / (2 * np.pi * const.c0)
         # TODO: x_array 和 y_array 与结构有关, 应当自动生成
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        ax.set_proj_type("ortho")
         
         if isinstance(level, int):  # TODO: 如果 level 是 int, 则画出投影等高线图
             ax.plot_surface(*bloch_wave_vectors, z_array[level], alpha=.6, cmap="rainbow")
@@ -281,20 +286,35 @@ class PWEMSolver(object):
         else:
             raise TypeError
         
-        self._set_ticks_range(ax, bloch_wave_vectors)
+        # self._set_ticks_range(ax, bloch_wave_vectors)
+        tmp_len = np.pi / self.lattice_constant
+        ax.set_xticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
+        ax.set_yticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
         
-        self._set_3d_ticks(fig, ax)
-        ax.set_xlim(np.min(bloch_wave_vectors[0]),
-                    np.max(bloch_wave_vectors[0]))
-        ax.set_ylim(np.min(bloch_wave_vectors[1]),
-                    np.max(bloch_wave_vectors[1]))
-        ax.set_zlim(zmin=0)
+
+        ax.set_xlim3d((-tmp_len, tmp_len))
+        ax.set_ylim3d((-tmp_len, tmp_len))
+
+        ax.set_zlim3d(zmin=0)
+        ax.azim = 225
         
-        ax.set_xlabel("$\\beta_x$")
-        ax.set_ylabel("$\\beta_y$")
-        ax.set_zlabel("$\\frac{\\omega a}{2\\pi c_0}$")
+        for axis in [ax.xaxis, ax.yaxis, ax.zaxis]:
+            # backgrounds
+            axis.pane.fill = False
+            axis.set_pane_color((1.0, 1.0, 1.0, 0))
+            # grid settings
+            axis._axinfo["grid"]['linestyle'] = "--"
+            axis._axinfo["grid"]['linewidth'] = 0.5
+            axis.set_rotate_label(False)
+            
+        # labels
+        ax.set_xlabel("$\\beta_x$", rotation=0)
+        ax.set_ylabel("$\\beta_y$", rotation=0)
+        ax.set_zlabel("$\\frac{\\omega a}{2\\pi c_0}$", rotation=0)
+        
         ax.set_title(f"2D Band Diagram of Level {level}")
-        fig.savefig("./outputs/3D_band_diagram.pdf")
+        # fig.savefig("./outputs/3D_band_diagram.pdf")
+        return fig, ax
     
     def _set_ticks_range(self, ax, bloch_wave_vectors):
         x_array, y_array = bloch_wave_vectors
@@ -312,24 +332,7 @@ class PWEMSolver(object):
         ax.set_xlim((x_array[0], x_array[-1]))
         ax.set_ylim((y_array[0], y_array[-1]))
     
-    def _set_3d_ticks(self, fig, ax):
-        ax.xaxis.set_tick_params(rotation=45)
-        ax.yaxis.set_tick_params(rotation=-15)
-        ax.zaxis.set_tick_params(rotation=-15)
-        ax.xaxis._axinfo["grid"]['linestyle'] = "--"
-        ax.yaxis._axinfo["grid"]['linestyle'] = "--"
-        # ax.zaxis._axinfo["grid"]['linestyle'] = "--"
-        ax.xaxis._axinfo["grid"]['linewidth'] = 0.5
-        ax.yaxis._axinfo["grid"]['linewidth'] = 0.5
-        # ax.zaxis._axinfo["grid"]['linewidth'] = 0.5
-        # print(dir(ax.xaxis))
-        # dx = -1.
-        # dy = 1.
-        # offset = mpl.transforms.ScaledTranslation(dx, dy, fig.dpi_scale_trans)
-        #
-        # ax.xaxis.set_transform(ax.xaxis.get_transform() + offset)
-        ax.tick_params(axis='both', which='major', labelsize=6)
-        # ax.set
+
     
     def show_path_bandgap(self, ax, distance_array, y_array, fineness=1e-3):
         min_array = np.min(y_array, axis=1)
