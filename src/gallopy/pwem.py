@@ -225,7 +225,7 @@ class PWEMSolver(object):
         if show_bandgap:
             self.show_path_bandgap(ax, distance_array, y_array)
         # plot settings
-        ax.set_ylim((0, 1))
+        ax.set_ylim(ymin=0)
         # 标注 key_point
         ax.vlines(distance_array[tick_positions[1:-1]], 0, ax.get_ylim()[1], "grey", "--", zorder=0)
         
