@@ -45,7 +45,7 @@ class MyTestCase(unittest.TestCase):
         
         fig, ax = solver.plot_path_band_diagram(P, Q, "E", key_points, 1000)
         # ax.set_ylim(ymax=1.4)
-        fig.savefig("./outputs/2D_band_diagram.pdf")
+        fig.savefig("./outputs/path_band_diagram.pdf")
     
     def test_2D_band_diagram(self):
         # 圆柱形孔洞, a = 1, r = 0.35*a, epsilon_r = 9.0
@@ -94,8 +94,8 @@ class MyTestCase(unittest.TestCase):
         #     np.linspace(M_point, Gamma_point, Nn3),
         #     [Gamma_point]])
         bloch_num = 50
-        x_array = np.linspace(-T1[0], T1[0], bloch_num)
-        y_array = np.linspace(-T2[1], T2[1], bloch_num)
+        x_array = np.linspace(-T1[0]/2, T1[0]/2, bloch_num)
+        y_array = np.linspace(-T2[1]/2, T2[1]/2, bloch_num)
         bloch_wave_vector = np.meshgrid(x_array, y_array)
         solver = PWEMSolver(epsilon_r, np.ones_like(epsilon_r), lattice_constant)
         P = 5

@@ -9,7 +9,7 @@ from scipy.linalg import eigh
 from . import rcParams
 from .matrix import convmat
 from matplotlib import patches, collections
-
+from . import physical_constant as const
 
 class KeyPoint(object):
     def __init__(self, name: str, position: ArrayLike):
@@ -111,8 +111,9 @@ class PWEMSolver(object):
                 k0_square = np.sort(k0_square)  # Sort eig vals (from lowest to highest)
                 # norm = 2 * np.pi / self.Lx
                 # k0 = np.real(np.sqrt(k0))   # Normalize eig-vals
-                
-                omega[:, n] = self.lattice_constant / (2 * np.pi) * np.real(np.sqrt(k0_square + 0j))
+                k0 = np.real(np.sqrt(k0_square + 0j))
+                omega[:, n] = k0 * const.c0  # FIXME: 没有将 y_array 归一化到 [0, 1] 区间内
+                # omega[:, n] = self.lattice_constant / (2 * np.pi) * np.real(np.sqrt(k0_square + 0j))
                 # omega[:, n] = k0_square
             # TODO: H mode
             else:  # mode == "H"
@@ -151,7 +152,7 @@ class PWEMSolver(object):
         
         # 初始化标准化的频率数组
         
-        omega: Sequence = np.zeros((spatial_harmonic_wave_num, *np.shape(bloch_wave_vectors)[1:]))
+        omega: np.array = np.zeros((spatial_harmonic_wave_num, *np.shape(bloch_wave_vectors)[1:]))
         for i in range(np.shape(bloch_wave_vectors)[1]):
             for j in range(np.shape(bloch_wave_vectors)[2]):
                 # for n, beta in enumerate(bloch_wave_vectors):
@@ -171,8 +172,9 @@ class PWEMSolver(object):
                     k0_square = np.sort(k0_square)  # Sort eig vals (from lowest to highest)
                     # norm = 2 * np.pi / self.Lx
                     # k0 = np.real(np.sqrt(k0))   # Normalize eig-vals
-                    
-                    omega[:, i, j] = self.lattice_constant / (2 * np.pi) * np.real(np.sqrt(k0_square + 0j))
+                    k0 = np.real(np.sqrt(k0_square + 0j))
+                    # omega[:, i, j] = self.lattice_constant / (2 * np.pi) * k0
+                    omega[:, i, j] = k0 * const.c0
                     # omega[:, n] = k0_square
                 # TODO: H mode
                 else:  # mode == "H"
@@ -211,57 +213,71 @@ class PWEMSolver(object):
         
         # diagram along the path, 沿路径画图
         fig, ax = plt.subplots()
-        
-        for i in range(len(omega)):
+        y_array = omega * self.lattice_constant / (2*np.pi * const.c0)
+        for i in range(len(y_array)):
             ax.plot(distance_array,
-                    omega[i],
+                    # omega[i] * self.lattice_constant / (2*np.pi * c0),
+                    y_array[i],
                     "k",
                     markerfacecolor="None",
                     # linewidth=1,
                     zorder=1)
         if show_bandgap:
-            self.show_path_bandgap(ax, distance_array, omega)
+            self.show_path_bandgap(ax, distance_array, y_array)
         # plot settings
-        ax.set_ylim(ymin=0)
+        ax.set_ylim((0, 1))
         # 标注 key_point
         ax.vlines(distance_array[tick_positions[1:-1]], 0, ax.get_ylim()[1], "grey", "--", zorder=0)
         
         ax.set_xticks(distance_array[tick_positions], tick_labels)
         ax.set_xlim((0, distance_array[-1]))
-        ax.set_ylabel("$k_0^2$")
+        ax.set_ylabel("$\\frac{\\omega a}{2\\pi c_0}$")
         ax.set_xlabel("$\\vec \\beta$")
         ax.set_title("Path Band Diagram")
         return fig, ax
     
-    def plot_2D_projection_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence, level: int,
+    def plot_2D_projection_band_diagram(self,
+                                        P: int,
+                                        Q: int,
+                                        mode,
+                                        bloch_wave_vectors: Sequence,
+                                        level: int,
                                         cmap="rainbow"):
         omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
+        z_array = omega * self.lattice_constant / (2*np.pi * const.c0)
         fig, ax = plt.subplots()
-        im = ax.pcolormesh(*bloch_wave_vectors, omega[level], linewidth=0, rasterized=True, cmap=cmap,
-                           shading="gouraud")
+        im = ax.pcolormesh(*bloch_wave_vectors,
+                           z_array[level],
+                           linewidth=0,
+                           rasterized=True,
+                           cmap=cmap,
+                           shading="gouraud",
+                           vmin=0)
         ax.set_box_aspect(1)
         cb = fig.colorbar(im, ax=ax)
-        cb.ax.set_title("$\\omega$")
+        cb.ax.set_title("$\\frac{\\omega a}{2\\pi c_0}$")
         self._set_ticks_range(ax, bloch_wave_vectors)
         ax.set_xlabel("$\\beta_x$")
         ax.set_ylabel("$\\beta_y$")
-        ax.set_title("2D Projection Band Diagram")
+        ax.set_title(f"2D Projection Band Diagram of Level {level}")
         fig.savefig("./outputs/3D_projection_band_diagram.pdf")
+        return fig, ax
     
     def plot_2D_band_diagram(self, P: int, Q: int, mode, bloch_wave_vectors: Sequence,
                              level: Union[int, Sequence[int]] = None):
         omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
+        z_array = omega * self.lattice_constant / (2 * np.pi * const.c0)
         # TODO: x_array 和 y_array 与结构有关, 应当自动生成
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         
         if isinstance(level, int):  # TODO: 如果 level 是 int, 则画出投影等高线图
-            ax.plot_surface(*bloch_wave_vectors, omega[level], alpha=.6, cmap="rainbow")
+            ax.plot_surface(*bloch_wave_vectors, z_array[level], alpha=.6, cmap="rainbow")
         elif isinstance(level, Iterable):  # FIXME: 没有判断可迭代对象的元素类型
             for level_i in level:
-                ax.plot_surface(*bloch_wave_vectors, omega[level_i], alpha=.6)
+                ax.plot_surface(*bloch_wave_vectors, z_array[level_i], alpha=.6)
         elif level is None:
-            for i in range(len(omega)):
-                ax.plot_surface(*bloch_wave_vectors, omega[i], alpha=.6)
+            for i in range(len(z_array)):
+                ax.plot_surface(*bloch_wave_vectors, z_array[i], alpha=.6)
         else:
             raise TypeError
         
@@ -276,8 +292,8 @@ class PWEMSolver(object):
         
         ax.set_xlabel("$\\beta_x$")
         ax.set_ylabel("$\\beta_y$")
-        ax.set_zlabel("$\\omega$")
-        ax.set_title("2D Band Diagram")
+        ax.set_zlabel("$\\frac{\\omega a}{2\\pi c_0}$")
+        ax.set_title(f"2D Band Diagram of Level {level}")
         fig.savefig("./outputs/3D_band_diagram.pdf")
     
     def _set_ticks_range(self, ax, bloch_wave_vectors):
@@ -302,10 +318,10 @@ class PWEMSolver(object):
         ax.zaxis.set_tick_params(rotation=-15)
         ax.xaxis._axinfo["grid"]['linestyle'] = "--"
         ax.yaxis._axinfo["grid"]['linestyle'] = "--"
-        ax.zaxis._axinfo["grid"]['linestyle'] = "--"
+        # ax.zaxis._axinfo["grid"]['linestyle'] = "--"
         ax.xaxis._axinfo["grid"]['linewidth'] = 0.5
         ax.yaxis._axinfo["grid"]['linewidth'] = 0.5
-        ax.zaxis._axinfo["grid"]['linewidth'] = 0.5
+        # ax.zaxis._axinfo["grid"]['linewidth'] = 0.5
         # print(dir(ax.xaxis))
         # dx = -1.
         # dy = 1.
@@ -315,11 +331,11 @@ class PWEMSolver(object):
         ax.tick_params(axis='both', which='major', labelsize=6)
         # ax.set
     
-    def show_path_bandgap(self, ax, distance_array, omega, fineness=1e-3):
-        min_array = np.min(omega, axis=1)
-        max_array = np.max(omega, axis=1)
+    def show_path_bandgap(self, ax, distance_array, y_array, fineness=1e-3):
+        min_array = np.min(y_array, axis=1)
+        max_array = np.max(y_array, axis=1)
         recoder = []
-        for i in range(np.shape(omega)[0] - 1):
+        for i in range(np.shape(y_array)[0] - 1):
             if min_array[i + 1] - max_array[i] > fineness:
                 recoder.append([max_array[i], min_array[i + 1]])
         
