@@ -8,6 +8,7 @@ sys.path.append("../scr")
 from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition
 from gallopy import rcParams
 
+
 class MyTestCase(unittest.TestCase):
     def test_fem1D(self):
         node_num = 50
@@ -19,9 +20,11 @@ class MyTestCase(unittest.TestCase):
         # x_array = np.concatenate([np.linspace(0, 0.5, 10, endpoint=False),
         #                           np.linspace(0.5, 1, node_num)])
         
-        condition = [DirichletBoundaryCondition(0, 0),
-                     DirichletBoundaryCondition(1, 1),
-                     DirichletBoundaryCondition(0.3, 0.5)]
+        condition = [
+            DirichletBoundaryCondition(0, 0),
+            DirichletBoundaryCondition(1, 1),
+            # DirichletBoundaryCondition(0.3, 0.5),
+        ]
         # condition.append(DirichletBoundaryCondition(x_array[20], .6))
         
         solver = FEMSolver1D(alpha, beta, force_func, condition)
