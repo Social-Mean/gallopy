@@ -197,6 +197,7 @@ class PWEMSolver(object):
                                mode,
                                key_points: Sequence[KeyPoint],
                                num: Union[int, Sequence] = 50,
+                               *,
                                show_bandgap=True):
         
         distance_array, omega, num_list = self.solve_path(P, Q, mode, key_points, num, return_num_list=True)
@@ -231,8 +232,8 @@ class PWEMSolver(object):
         
         ax.set_xticks(distance_array[tick_positions], tick_labels)
         ax.set_xlim((0, distance_array[-1]))
-        ax.set_ylabel("$\\frac{\\omega a}{2\\pi c_0}$")
-        ax.set_xlabel("$\\vec \\beta$")
+        ax.set_xlabel("Bloch Wave Vector $\\vec \\beta$")
+        ax.set_ylabel("Nomalized Frequency $\\frac{\\omega a}{2\\pi c_0}$")
         ax.set_title("Path Band Diagram")
         return fig, ax
     
@@ -352,3 +353,16 @@ class PWEMSolver(object):
                                      zorder=2)
             
             ax.add_patch(rect)
+
+    def draw_structure(self):
+        Nx, Ny = np.shape(self.epsilon_r)
+        half_lattice_constant = self.lattice_constant / 2
+        x_array = np.linspace(-half_lattice_constant, half_lattice_constant, Nx)
+        y_array = np.linspace(-half_lattice_constant, half_lattice_constant, Ny)
+        
+        fig, ax = plt.subplots()
+        
+        ax.pcolormesh(x_array, y_array, self.epsilon_r)
+        
+        return fig, ax
+        
