@@ -164,5 +164,8 @@ class MyTestCase(unittest.TestCase):
         fig, ax = solver.draw_structure()
         fig.savefig("./outputs/structure.pdf")
         
+        fig, ax = solver.draw_first_brillouin_zone(key_points)
+        fig.savefig("./outputs/1BZ.pdf")
+        
 if __name__ == '__main__':
     unittest.main()

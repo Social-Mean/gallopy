@@ -366,14 +366,14 @@ class PWEMSolver(object):
                            cmap=cmap,
                            linewidth=0,
                            rasterized=True)
-        ax.set_box_aspect(self.lattice_constant / self.lattice_constant)
-        ax.set_xticks([x_array[0], 0, x_array[-1]], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
-        ax.set_yticks([y_array[0], 0, y_array[-1]], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
+        ax.set_box_aspect(1)
+        ax.set_xticks([x_array[0], 0, x_array[-1]], [r"$-a/2$", "0", r"$a/2$"])
+        ax.set_yticks([y_array[0], 0, y_array[-1]], [r"$-a/2$", "0", r"$a/2$"])
         ax.set_xlim((x_array[0], x_array[-1]))
         ax.set_ylim((y_array[0], y_array[-1]))
         ax.set_xlabel("$x$")
         ax.set_ylabel("$y$", rotation=0)
-        ax.set_title("The Lattice Structure")
+        ax.set_title("Diagram of the Lattice Structure")
         
         cb = fig.colorbar(im, ax=ax)
         cb.ax.set_title("$\\epsilon_r$")
@@ -399,3 +399,56 @@ class PWEMSolver(object):
         im.set_clim((min(ticks), max(ticks)))
         
         return fig, ax
+
+    def draw_first_brillouin_zone(self, key_points):
+        half_len = np.pi / self.lattice_constant
+        rect_1BZ = patches.Rectangle((-half_len, -half_len),
+                                     2*half_len,
+                                     2*half_len,
+                                     color="None")
+        
+        fig, ax = plt.subplots()
+        ax.set_box_aspect(1)
+        ax.add_patch(rect_1BZ)
+        
+        pos_list = [_.position for _ in key_points]
+        name_list = [_.name for _ in key_points]
+
+        # polygon
+        xy_arr = np.zeros((len(key_points), 2))
+        for i in range(len(key_points)):
+            xy_arr[i] = key_points[i].position
+        polygon = patches.Polygon(xy_arr, color="#8eb4e3", alpha=.5, clip_on=False)
+        ax.add_patch(polygon)
+        
+        # points and texts
+        for point in key_points:
+            circ = patches.Circle(point.position, 0.1, clip_on=False)
+            ax.add_patch(circ)
+            ax.text(*point.position, point.name, ha="right", va="bottom")
+        
+        # arrow
+        for i in range(len(key_points)):
+            x, y = key_points[i].position
+            j = i+1 if i+1 < len(key_points) else 0
+            dx, dy = key_points[j].position - key_points[i].position
+            arrow = patches.Arrow(x, y, dx, dy, 0.1)
+            # ax.add_patch(arrow)
+            ax.arrow(x, y, dx, dy, width=.03, length_includes_head=True, facecolor="k", clip_on=False)
+            
+
+        
+        ax.set_xticks([-half_len, 0, half_len], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
+        ax.set_yticks([-half_len, 0, half_len], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
+        
+        ax.set_xlim((-half_len, half_len))
+        ax.set_ylim((-half_len, half_len))
+        
+        ax.set_title("Diagram of the First Brillouin Zone")
+        ax.set_xlabel(r"$\beta_x$")
+        ax.set_ylabel(r"$\beta_y$", rotation=0)
+        
+        return fig, ax
+    
+    
+    
