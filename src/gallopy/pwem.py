@@ -10,6 +10,7 @@ from . import rcParams
 from .matrix import convmat
 from matplotlib import patches, collections
 from . import physical_constant as const
+from matplotlib.colors import ListedColormap
 
 class KeyPoint(object):
     def __init__(self, name: str, position: ArrayLike):
@@ -214,7 +215,7 @@ class PWEMSolver(object):
         
         # diagram along the path, 沿路径画图
         fig, ax = plt.subplots()
-        y_array = omega * self.lattice_constant / (2*np.pi * const.c0)
+        y_array = omega * self.lattice_constant / (2 * np.pi * const.c0)
         for i in range(len(y_array)):
             ax.plot(distance_array,
                     # omega[i] * self.lattice_constant / (2*np.pi * c0),
@@ -245,7 +246,7 @@ class PWEMSolver(object):
                                         level: int,
                                         cmap="rainbow"):
         omega = self.solve_2D(P, Q, mode, bloch_wave_vectors)
-        z_array = omega * self.lattice_constant / (2*np.pi * const.c0)
+        z_array = omega * self.lattice_constant / (2 * np.pi * const.c0)
         fig, ax = plt.subplots()
         im = ax.pcolormesh(*bloch_wave_vectors,
                            z_array[level],
@@ -258,7 +259,7 @@ class PWEMSolver(object):
         cb = fig.colorbar(im, ax=ax)
         cb.ax.set_title("$\\frac{\\omega a}{2\\pi c_0}$")
         # self._set_ticks_range(ax, bloch_wave_vectors)
-        tmp_len = np.pi/self.lattice_constant
+        tmp_len = np.pi / self.lattice_constant
         ax.set_xticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
         ax.set_yticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
         
@@ -292,10 +293,9 @@ class PWEMSolver(object):
         ax.set_xticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
         ax.set_yticks([-tmp_len, 0, tmp_len], ["$-\\dfrac{\\pi}{a}$", "$0$", "$\\dfrac{\\pi}{a}$"])
         
-
         ax.set_xlim3d((-tmp_len, tmp_len))
         ax.set_ylim3d((-tmp_len, tmp_len))
-
+        
         ax.set_zlim3d(zmin=0)
         ax.azim = 225
         
@@ -307,7 +307,7 @@ class PWEMSolver(object):
             axis._axinfo["grid"]['linestyle'] = "--"
             axis._axinfo["grid"]['linewidth'] = 0.5
             axis.set_rotate_label(False)
-            
+        
         # labels
         ax.set_xlabel("$\\beta_x$", rotation=0)
         ax.set_ylabel("$\\beta_y$", rotation=0)
@@ -333,8 +333,6 @@ class PWEMSolver(object):
         ax.set_xlim((x_array[0], x_array[-1]))
         ax.set_ylim((y_array[0], y_array[-1]))
     
-
-    
     def show_path_bandgap(self, ax, distance_array, y_array, fineness=1e-3):
         min_array = np.min(y_array, axis=1)
         max_array = np.max(y_array, axis=1)
@@ -353,16 +351,51 @@ class PWEMSolver(object):
                                      zorder=2)
             
             ax.add_patch(rect)
-
-    def draw_structure(self):
+    
+    def draw_structure(self, cmap=ListedColormap(["darkorange", "gold", "lawngreen", "lightseagreen"])):
         Nx, Ny = np.shape(self.epsilon_r)
         half_lattice_constant = self.lattice_constant / 2
         x_array = np.linspace(-half_lattice_constant, half_lattice_constant, Nx)
         y_array = np.linspace(-half_lattice_constant, half_lattice_constant, Ny)
         
+        
         fig, ax = plt.subplots()
         
-        ax.pcolormesh(x_array, y_array, self.epsilon_r)
+        # im = ax.pcolormesh(x_array, y_array, self.epsilon_r, cmap="Greys")
+        im = ax.pcolormesh(x_array, y_array, self.epsilon_r.transpose(),
+                           cmap=cmap,
+                           linewidth=0,
+                           rasterized=True)
+        ax.set_box_aspect(self.lattice_constant / self.lattice_constant)
+        ax.set_xticks([x_array[0], 0, x_array[-1]], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
+        ax.set_yticks([y_array[0], 0, y_array[-1]], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
+        ax.set_xlim((x_array[0], x_array[-1]))
+        ax.set_ylim((y_array[0], y_array[-1]))
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$", rotation=0)
+        ax.set_title("The Lattice Structure")
+        
+        cb = fig.colorbar(im, ax=ax)
+        cb.ax.set_title("$\\epsilon_r$")
+        
+        white = np.array([1, 1, 1])
+        black = np.array([0, 0, 0])
+        # 添加最大和最小值的刻度
+        # cb.set_ticks(list(cb.get_ticks()) + [np.min(self.epsilon_r), np.max(self.epsilon_r)])
+        
+        ticks = np.sort(np.array(cb.get_ticks()))
+        color_num = len(ticks)-1
+        # ticks_normalized = ticks - min(ticks)
+        # ticks_normalized = ticks_normalized / max(ticks_normalized)
+        # color_arr = []
+        # for tick in ticks_normalized:
+        #     color_arr.append([1-tick, 1-tick, 1-tick, 1])
+        # color_arr = color_arr[1:]
+        
+        color_arr = np.linspace(white, black, color_num)
+        cmap = ListedColormap(color_arr)
+        im.set_cmap(cmap)
+        cb.set_ticks(ticks)
+        im.set_clim((min(ticks), max(ticks)))
         
         return fig, ax
-        

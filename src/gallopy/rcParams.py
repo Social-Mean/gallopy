@@ -15,7 +15,7 @@ plt.rcParams["figure.dpi"] = 600
 plt.rcParams["legend.fancybox"] = False
 plt.rcParams["legend.framealpha"] = 1
 plt.rcParams["axes.prop_cycle"] = plt.cycler('color', ["#E64B35", "#4DBBD5", "#00A087", "#3C5488", "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148", "#B09C85"])
-
+plt.rcParams['axes.autolimit_mode'] = 'round_numbers'
 # 取消 3D 画图时坐标轴边界处的缓冲区
 from mpl_toolkits.mplot3d.axis3d import Axis
 if not hasattr(Axis, "_get_coord_info_old"):
