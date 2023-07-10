@@ -8,7 +8,7 @@ from scipy.sparse import dia_matrix
 from scipy.sparse.linalg import lsqr, spsolve
 from scipy.linalg import solve_banded, solveh_banded
 from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
-
+from matplotlib.tri import Triangulation
 
 class FEMSolver1D(object):
     def __init__(self,
@@ -30,21 +30,22 @@ class FEMSolver1D(object):
                 pass
             
     def _cal_param_matrix(self, x_array: ArrayLike) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
-        segments_num = len(x_array)
+        mid_x_arr = (x_array[:-1] + x_array[1:]) / 2
+        segments_num = len(mid_x_arr)
         # alpha, beta, f 矩阵,
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         if isinstance(self.alpha_func, Callable):
-            alpha = self.alpha_func(x_array)
+            alpha = self.alpha_func(mid_x_arr)
         else:
             alpha = np.ones(segments_num) * self.alpha_func
         
         if isinstance(self.beta_func, Callable):
-            beta = self.beta_func(x_array)
+            beta = self.beta_func(mid_x_arr)
         else:
             beta = np.ones(segments_num) * self.beta_func
         
         if isinstance(self.force_func, Callable):
-            f = self.force_func(x_array)
+            f = self.force_func(mid_x_arr)
         else:
             f = np.ones(segments_num) * self.force_func
         return alpha, beta, f
@@ -53,8 +54,8 @@ class FEMSolver1D(object):
         
         segments_num = len(x_array) - 1
         # 使用线段的中点值计算 alpha, beta 和 f
-        mid_x_arr = (x_array[:-1] + x_array[1:]) / 2
-        alpha, beta, f = self._cal_param_matrix(mid_x_arr)
+        
+        alpha, beta, f = self._cal_param_matrix(x_array)
         
         # l 矩阵
         ell = np.zeros(segments_num)
@@ -139,21 +140,43 @@ class FEMSolver2D(object):
                 pass
     
     def _cal_param_matrix(self, X_arr, Y_arr) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
-        segments_num = np.shape(X_arr) - np.array([1, 1])
+        # segments_num = np.shape(X_arr) - np.array([1, 1])
+        
+        mid_X_arr = (X_arr[:-1, :-1] + X_arr[1:, 1:]) / 2
+        mid_Y_arr = (Y_arr[:-1, :-1] + Y_arr[1:, 1:]) / 2
+        
+        segments_num = np.shape(mid_X_arr)
         # alpha, beta, f 矩阵,
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         if isinstance(self.alpha_x_func, Callable):
-            alpha_x = self.alpha_x_func(x_array[:-1])
+            alpha_x = self.alpha_x_func(mid_X_arr, mid_Y_arr)
         else:
-            alpha = np.ones(segments_num) * self.alpha_func
+            alpha_x = np.ones(segments_num) * self.alpha_x_func
+        
+        if isinstance(self.alpha_y_func, Callable):
+            alpha_y = self.alpha_y_func(mid_X_arr, mid_Y_arr)
+        else:
+            alpha_y = np.ones(segments_num) * self.alpha_y_func
         
         if isinstance(self.beta_func, Callable):
-            beta = self.beta_func(x_array[:-1])
+            beta = self.beta_func(mid_X_arr, mid_Y_arr)
         else:
             beta = np.ones(segments_num) * self.beta_func
         
         if isinstance(self.force_func, Callable):
-            f = self.force_func(x_array[:-1])
+            f = self.force_func(mid_X_arr, mid_Y_arr)
         else:
             f = np.ones(segments_num) * self.force_func
-        return alpha, beta, f
+        return alpha_x, alpha_y, beta, f
+    
+    def solve(self, triangulation: Triangulation):
+        x_arr = triangulation.x
+        y_arr = triangulation.y
+        
+        X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
+        alpha_x, alpha_y, beta, f = self._cal_param_matrix(X_arr, Y_arr)
+        
+        ns_mat = triangulation.triangles
+        pass
+    
+    

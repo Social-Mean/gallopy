@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 sys.path.append("../scr")
-from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition
+from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition, FEMSolver2D
 from gallopy import rcParams
 from scipy.integrate import solve_bvp, odeint
 
@@ -87,8 +87,12 @@ class MyTestCase(unittest.TestCase):
         
         triangulation = mpl.tri.Triangulation(x, y)
         print(triangulation.triangles)
+        print(triangulation.x, triangulation.y)
         plt.triplot(triangulation)
-        plt.show()
+        plt.savefig("./outputs/tri_mesh.pdf")
+        
+        solver = FEMSolver2D(1, 1, 0, 0, [])
+        solver.solve(triangulation)
 
 
 if __name__ == '__main__':
