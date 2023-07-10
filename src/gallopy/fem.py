@@ -28,27 +28,33 @@ class FEMSolver1D(object):
                 self.dirichlet_boundary_condition_list.append(condition)
             else:
                 pass
-    
-    def solve(self,
-              x_array: ArrayLike) -> ArrayLike:
-        segments_num = len(x_array) - 1
-        
+            
+    def _cal_param_matrix(self, x_array: ArrayLike) -> tuple[ArrayLike, ArrayLike, ArrayLike]:
+        segments_num = len(x_array)
         # alpha, beta, f 矩阵,
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         if isinstance(self.alpha_func, Callable):
-            alpha = self.alpha_func(x_array[:-1])
+            alpha = self.alpha_func(x_array)
         else:
             alpha = np.ones(segments_num) * self.alpha_func
         
         if isinstance(self.beta_func, Callable):
-            beta = self.beta_func(x_array[:-1])
+            beta = self.beta_func(x_array)
         else:
             beta = np.ones(segments_num) * self.beta_func
         
         if isinstance(self.force_func, Callable):
-            f = self.force_func(x_array[:-1])
+            f = self.force_func(x_array)
         else:
             f = np.ones(segments_num) * self.force_func
+        return alpha, beta, f
+    
+    def solve(self, x_array: ArrayLike) -> ArrayLike:
+        
+        segments_num = len(x_array) - 1
+        # 使用线段的中点值计算 alpha, beta 和 f
+        mid_x_arr = (x_array[:-1] + x_array[1:]) / 2
+        alpha, beta, f = self._cal_param_matrix(mid_x_arr)
         
         # l 矩阵
         ell = np.zeros(segments_num)
@@ -69,18 +75,18 @@ class FEMSolver1D(object):
         K_matrix = np.zeros((segments_num + 1, segments_num + 1))
         K_matrix[0, 0] = K_11[0]
         K_matrix[-1, -1] = K_22[-1]
-        for i in range(1, segments_num):
-            K_matrix[i, i] = K_22[i - 1] + K_11[i]
+        for i in range(1, np.shape(K_matrix)[0]-1):
+            K_matrix[i, i] = K_22[i-1] + K_11[i]
             # K_matrix[i, i-1] = K_21[i-1]
             # K_matrix[i-1, i] = K_12[i-1]
-            K_matrix[i + 1, i] = K_21[i]
-            K_matrix[i, i + 1] = K_12[i]
+            K_matrix[i+1, i] = K_21[i]
+            K_matrix[i, i+1] = K_12[i]
         
         # 常数矩阵 b
         b_matrix = np.zeros(segments_num + 1)
         b_matrix[0] = f[0] * ell[0] / 2
         b_matrix[-1] = f[-1] * ell[-1] / 2
-        for i in range(1, segments_num):
+        for i in range(1, len(b_matrix)-1):
             b_matrix[i] = b2[i - 1] + b1[i]
         
         # 施加狄利克雷边界条件
@@ -107,6 +113,7 @@ class FEMSolver1D(object):
 # class LaplaceSolver1D(FEMSolver1D):
 #     def __init__(self):
 
+
 class FEMSolver2D(object):
     def __init__(self,
                  alpha_x_func: Union[Callable, Number],
@@ -114,6 +121,39 @@ class FEMSolver2D(object):
                  beta_func: Union[Callable, Number],
                  force_func: Union[Callable, Number],
                  boundary_conditions: Sequence[BoundaryCondition]):
-        pass
+        self.alpha_x_func = alpha_x_func
+        self.alpha_y_func = alpha_y_func
+        self.beta_func = beta_func
+        self.force_func = force_func
+        self.boundary_conditions = boundary_conditions
+        
+        self.dirichlet_boundary_condition_list = []
+        self.neumann_boundary_condition_list = []
+        self.third_boundary_condition_list = []
+        
+        # 边界条件的分类
+        for condition in self.boundary_conditions:
+            if isinstance(condition, DirichletBoundaryCondition):
+                self.dirichlet_boundary_condition_list.append(condition)
+            else:
+                pass
     
-    
+    def _cal_param_matrix(self, X_arr, Y_arr) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+        segments_num = np.shape(X_arr) - np.array([1, 1])
+        # alpha, beta, f 矩阵,
+        # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
+        if isinstance(self.alpha_x_func, Callable):
+            alpha_x = self.alpha_x_func(x_array[:-1])
+        else:
+            alpha = np.ones(segments_num) * self.alpha_func
+        
+        if isinstance(self.beta_func, Callable):
+            beta = self.beta_func(x_array[:-1])
+        else:
+            beta = np.ones(segments_num) * self.beta_func
+        
+        if isinstance(self.force_func, Callable):
+            f = self.force_func(x_array[:-1])
+        else:
+            f = np.ones(segments_num) * self.force_func
+        return alpha, beta, f
