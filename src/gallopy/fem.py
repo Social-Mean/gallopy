@@ -9,7 +9,10 @@ from scipy.sparse.linalg import lsqr, spsolve
 from scipy.linalg import solve_banded, solveh_banded
 from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
 from matplotlib.tri import Triangulation
+from .matrix import kronecker_delta
 
+
+    
 class FEMSolver1D(object):
     def __init__(self,
                  alpha_func: Union[Callable, Number],
@@ -139,9 +142,10 @@ class FEMSolver2D(object):
             else:
                 pass
     
-    def _cal_param_matrix(self, X_arr, Y_arr) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+    def _cal_param_matrix(self, x_arr, y_arr) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         # segments_num = np.shape(X_arr) - np.array([1, 1])
-        
+        X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
+
         mid_X_arr = (X_arr[:-1, :-1] + X_arr[1:, 1:]) / 2
         mid_Y_arr = (Y_arr[:-1, :-1] + Y_arr[1:, 1:]) / 2
         
@@ -170,13 +174,48 @@ class FEMSolver2D(object):
         return alpha_x, alpha_y, beta, f
     
     def solve(self, triangulation: Triangulation):
+        ns_mat = triangulation.triangles
+
         x_arr = triangulation.x
         y_arr = triangulation.y
         
-        X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
-        alpha_x, alpha_y, beta, f = self._cal_param_matrix(X_arr, Y_arr)
+        alpha_x, alpha_y, beta, f = self._cal_param_matrix(x_arr, y_arr)
         
-        ns_mat = triangulation.triangles
+        Delta_arr = self._cal_Delta_arr(ns_mat, x_arr, y_arr)
+        
+        N_arr = self._cal_N_arr(x_arr, y_arr)
+        
         pass
+    
+    def _cal_Delta_arr(self, ns_mat: ArrayLike, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
+        # ns_mat = triangulation.triangles
+        # x_arr = triangulation.x
+        # y_arr = triangulation.y
+        
+        ns1, ns2, ns3 = np.hsplit(ns_mat, 3)
+        ns1 = ns1.flatten()
+        ns2 = ns2.flatten()
+        ns3 = ns3.flatten()
+        
+        x1_arr = x_arr[ns1]
+        x2_arr = x_arr[ns2]
+        x3_arr = x_arr[ns3]
+        
+        y1_arr = y_arr[ns1]
+        y2_arr = y_arr[ns2]
+        y3_arr = y_arr[ns3]
+        
+        b1_arr = y2_arr - y3_arr
+        b2_arr = y3_arr - y1_arr
+        
+        c1_arr = x3_arr - x2_arr
+        c2_arr = x1_arr - x3_arr
+        
+        Delta_arr = (b1_arr*c2_arr - b2_arr*c1_arr) / 2
+        return Delta_arr
+    
+    def _cal_N_arr(self, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
+        pass
+        
     
     

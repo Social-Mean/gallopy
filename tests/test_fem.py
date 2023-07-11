@@ -73,22 +73,32 @@ class MyTestCase(unittest.TestCase):
         node = np.zeros((3, 8))
         
     def test_mpl_tri(self):
-        # x = np.random.random(20)
-        # y = np.random.random(20)
+        pt_num = 10
+        x = np.random.random(pt_num)
+        y = np.random.random(pt_num)
         # x = np.array([0, 0, 2, 2])
         # y = np.array([0, 1, 0, 1])
-        x = np.linspace(0, 10, 3)
-        y = np.linspace(0, 10, 3)
-        x, y = np.meshgrid(x, y)
-        x = x.flatten()
-        y = y.flatten()
-        # x[3] = 7
-        # y[3] = 9
+        # x = np.linspace(0, 10, 3)
+        # y = np.linspace(0, 10, 3)
         
         triangulation = mpl.tri.Triangulation(x, y)
         print(triangulation.triangles)
         print(triangulation.x, triangulation.y)
-        plt.triplot(triangulation)
+        plt.triplot(triangulation, color="k")
+        # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
+        for row_i, row in enumerate(triangulation.triangles):
+            for col in row:
+                plt.text(triangulation.x[col],
+                         triangulation.y[col],
+                         col,
+                         ha="center",
+                         va="center",
+                         backgroundcolor="r",
+                         color="w",
+                         bbox=dict(boxstyle="circle"))
+                mid_x = np.mean(triangulation.x[row])
+                mid_y = np.mean(triangulation.y[row])
+                plt.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
         plt.savefig("./outputs/tri_mesh.pdf")
         
         solver = FEMSolver2D(1, 1, 0, 0, [])
