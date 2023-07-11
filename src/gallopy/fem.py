@@ -152,20 +152,24 @@ class FEMSolver2D(object):
         segments_num = np.shape(mid_X_arr)
         # alpha, beta, f 矩阵,
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
+        # TODO alpha_x 等都是向量, 索引是e
         if isinstance(self.alpha_x_func, Callable):
             alpha_x = self.alpha_x_func(mid_X_arr, mid_Y_arr)
         else:
             alpha_x = np.ones(segments_num) * self.alpha_x_func
+            alpha_x = self.alpha_x_func
         
         if isinstance(self.alpha_y_func, Callable):
             alpha_y = self.alpha_y_func(mid_X_arr, mid_Y_arr)
         else:
             alpha_y = np.ones(segments_num) * self.alpha_y_func
+            alpha_y = self.alpha_y_func
         
         if isinstance(self.beta_func, Callable):
             beta = self.beta_func(mid_X_arr, mid_Y_arr)
         else:
             beta = np.ones(segments_num) * self.beta_func
+            beta = self.beta_func
         
         if isinstance(self.force_func, Callable):
             f = self.force_func(mid_X_arr, mid_Y_arr)
@@ -180,17 +184,46 @@ class FEMSolver2D(object):
         y_arr = triangulation.y
         
         alpha_x, alpha_y, beta, f = self._cal_param_matrix(x_arr, y_arr)
-        
-        Delta_arr = self._cal_Delta_arr(ns_mat, x_arr, y_arr)
+        a_arr_3x0, b_arr_3x0, c_arr_3x0 = self._cal_abc_arr_3x0(ns_mat, x_arr, y_arr)
+        Delta_arr = self._cal_Delta_arr(b_arr_3x0, c_arr_3x0)
         
         N_arr = self._cal_N_arr(x_arr, y_arr)
-        
+        K_arr_3x3x0 = self._cal_K_arr_3x3x0(alpha_x, alpha_y, beta, Delta_arr, b_arr_3x0, c_arr_3x0)
         pass
     
-    def _cal_Delta_arr(self, ns_mat: ArrayLike, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
-        # ns_mat = triangulation.triangles
-        # x_arr = triangulation.x
-        # y_arr = triangulation.y
+    def _cal_Delta_arr(self, b_arr_3x0: ArrayLike, c_arr_3x0: ArrayLike) -> ArrayLike:
+     
+        
+        Delta_arr = (b_arr_3x0[0]*c_arr_3x0[1] - b_arr_3x0[1]*c_arr_3x0[0]) / 2
+        return Delta_arr
+    
+    def _cal_N_arr(self, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
+        # N_arr = kronecker_delta()
+        pass
+    
+    def _cal_K_arr_3x3x0(self,
+                         alpha_x: ArrayLike,
+                         alpha_y: ArrayLike,
+                         beta: ArrayLike,
+                         Delta_arr: ArrayLike,
+                         b_arr_3x0: ArrayLike,
+                         c_arr_3x0: ArrayLike) -> ArrayLike:
+        arr_len = len(Delta_arr)
+        K_arr_3x3x0 = np.zeros((3, 3, arr_len))
+        
+        for i in range(3):
+            for j in range(3):
+                tmp1 = alpha_x * b_arr_3x0[i] * b_arr_3x0[j] + alpha_y * c_arr_3x0[i] * c_arr_3x0[j]
+                tmp2 = beta*(1+kronecker_delta(i, j))
+                K_arr_3x3x0[i, j] = tmp1 / (4*Delta_arr) + Delta_arr/12 * tmp2
+        
+        return K_arr_3x3x0
+        
+    def _cal_abc_arr_3x0(self, ns_mat, x_arr, y_arr):
+        arr_len = len(ns_mat)
+        a_arr_3x0 = np.zeros((3, arr_len))
+        b_arr_3x0 = np.zeros((3, arr_len))
+        c_arr_3x0 = np.zeros((3, arr_len))
         
         ns1, ns2, ns3 = np.hsplit(ns_mat, 3)
         ns1 = ns1.flatten()
@@ -205,17 +238,19 @@ class FEMSolver2D(object):
         y2_arr = y_arr[ns2]
         y3_arr = y_arr[ns3]
         
-        b1_arr = y2_arr - y3_arr
-        b2_arr = y3_arr - y1_arr
+        a_arr_3x0[0] = x2_arr*y3_arr - y2_arr*x3_arr
+        a_arr_3x0[1] = x3_arr*y1_arr - y3_arr*x1_arr
+        a_arr_3x0[2] = x1_arr*y2_arr - y1_arr*x2_arr
         
-        c1_arr = x3_arr - x2_arr
-        c2_arr = x1_arr - x3_arr
+        b_arr_3x0[0] = y2_arr - y3_arr
+        b_arr_3x0[1] = y3_arr - y1_arr
+        b_arr_3x0[2] = y1_arr - y2_arr
         
-        Delta_arr = (b1_arr*c2_arr - b2_arr*c1_arr) / 2
-        return Delta_arr
-    
-    def _cal_N_arr(self, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
-        pass
+        c_arr_3x0[0] = x3_arr - x2_arr
+        c_arr_3x0[1] = x1_arr - x3_arr
+        c_arr_3x0[2] = x2_arr - x1_arr
+        
+        return a_arr_3x0, b_arr_3x0, c_arr_3x0
         
     
     
