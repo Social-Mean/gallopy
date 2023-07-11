@@ -73,37 +73,48 @@ class MyTestCase(unittest.TestCase):
         node = np.zeros((3, 8))
         
     def test_mpl_tri(self):
-        pt_num = 10
+        pt_num = 20
         x = np.random.random(pt_num)
         y = np.random.random(pt_num)
+        
+        x = list(x)
+        y = list(y)
+        
+        x.append(0)
+        y.append(0)
+        
+        x.append(0)
+        y.append(1)
+        
+        x.append(1)
+        y.append(0)
+        
+        x.append(1)
+        y.append(1)
         # x = np.array([0, 0, 2, 2])
         # y = np.array([0, 1, 0, 1])
-        # x = np.linspace(0, 10, 3)
-        # y = np.linspace(0, 10, 3)
+        
+        
+        # x = np.linspace(0, 1, 10)
+        # y = np.linspace(0, 1, 10)
+        # x, y = np.meshgrid(x, y)
+        # x = x.flatten()
+        # y = y.flatten()
         
         triangulation = mpl.tri.Triangulation(x, y)
-        print(triangulation.triangles)
-        print(triangulation.x, triangulation.y)
-        plt.triplot(triangulation, color="k")
-        # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
-        for row_i, row in enumerate(triangulation.triangles):
-            for col in row:
-                plt.text(triangulation.x[col],
-                         triangulation.y[col],
-                         col,
-                         ha="center",
-                         va="center",
-                         backgroundcolor="r",
-                         color="w",
-                         bbox=dict(boxstyle="circle"))
-                mid_x = np.mean(triangulation.x[row])
-                mid_y = np.mean(triangulation.y[row])
-                plt.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
-        plt.savefig("./outputs/tri_mesh.pdf")
+        # print(triangulation.triangles)
+        # print(triangulation.x, triangulation.y)
+        
         force_func = lambda x, y: x+y
         solver = FEMSolver2D(1, 1, 0, force_func, [])
+        fig, ax = solver.plot_mesh(triangulation)
+        fig.savefig("./outputs/tri_mesh.pdf")
+        
+        fig, ax = solver.plot_K_mat(triangulation)
+        fig.savefig("./outputs/K_mat.pdf")
+        
         solver.solve(triangulation)
-
+        
 
 if __name__ == '__main__':
     unittest.main()
