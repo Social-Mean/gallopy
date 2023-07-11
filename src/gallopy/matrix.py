@@ -2,7 +2,8 @@ import numpy as np
 from numpy.fft import fftshift, fftn
 import matplotlib.pyplot as plt
 from numpy.typing import ArrayLike
-
+from typing import Union, Callable, Sequence
+from numbers import Number
 
 def convmat(A, P, Q):
     # Extract spatial harmonics (P, Q, R) of a general 3D unit cell
@@ -62,3 +63,8 @@ def redheffer_product(SA: ArrayLike, SB: ArrayLike):
     
     S = np.array([[S11, S12], [S21, S22]])
     return S
+
+def kronecker_delta(i: Union[Number, ArrayLike], j: Union[Number, ArrayLike]) -> Union[Number, ArrayLike]:
+    if isinstance(i, Number) and isinstance(j, Number):
+        return i == j
+    return np.array(i == j).astype(int)
