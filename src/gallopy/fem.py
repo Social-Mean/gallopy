@@ -142,37 +142,40 @@ class FEMSolver2D(object):
             else:
                 pass
     
-    def _cal_param_matrix(self, x_arr, y_arr) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+    def _cal_param_arr(self,
+                       ns_mat: ArrayLike,
+                       x_arr: ArrayLike,
+                       y_arr: ArrayLike) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         # segments_num = np.shape(X_arr) - np.array([1, 1])
-        X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
-
-        mid_X_arr = (X_arr[:-1, :-1] + X_arr[1:, 1:]) / 2
-        mid_Y_arr = (Y_arr[:-1, :-1] + Y_arr[1:, 1:]) / 2
+        # X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
+        #
+        # mid_X_arr = (X_arr[:-1, :-1] + X_arr[1:, 1:]) / 2
+        # mid_Y_arr = (Y_arr[:-1, :-1] + Y_arr[1:, 1:]) / 2
         
-        segments_num = np.shape(mid_X_arr)
+        segments_num = np.shape(ns_mat)[0]
         # alpha, beta, f 矩阵,
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         # TODO alpha_x 等都是向量, 索引是e
         if isinstance(self.alpha_x_func, Callable):
-            alpha_x = self.alpha_x_func(mid_X_arr, mid_Y_arr)
+            alpha_x = self.alpha_x_func(x_arr, y_arr)
         else:
             alpha_x = np.ones(segments_num) * self.alpha_x_func
-            alpha_x = self.alpha_x_func
+            # alpha_x = self.alpha_x_func
         
         if isinstance(self.alpha_y_func, Callable):
-            alpha_y = self.alpha_y_func(mid_X_arr, mid_Y_arr)
+            alpha_y = self.alpha_y_func(x_arr, y_arr)
         else:
             alpha_y = np.ones(segments_num) * self.alpha_y_func
-            alpha_y = self.alpha_y_func
+            # alpha_y = self.alpha_y_func
         
         if isinstance(self.beta_func, Callable):
-            beta = self.beta_func(mid_X_arr, mid_Y_arr)
+            beta = self.beta_func(x_arr, y_arr)
         else:
             beta = np.ones(segments_num) * self.beta_func
-            beta = self.beta_func
+            # beta = self.beta_func
         
         if isinstance(self.force_func, Callable):
-            f = self.force_func(mid_X_arr, mid_Y_arr)
+            f = self.force_func(x_arr, y_arr)
         else:
             f = np.ones(segments_num) * self.force_func
         return alpha_x, alpha_y, beta, f
@@ -183,7 +186,7 @@ class FEMSolver2D(object):
         x_arr = triangulation.x
         y_arr = triangulation.y
         
-        alpha_x, alpha_y, beta, f = self._cal_param_matrix(x_arr, y_arr)
+        alpha_x, alpha_y, beta, f = self._cal_param_arr(ns_mat, x_arr, y_arr)
         a_arr_3x0, b_arr_3x0, c_arr_3x0 = self._cal_abc_arr_3x0(ns_mat, x_arr, y_arr)
         Delta_arr = self._cal_Delta_arr(b_arr_3x0, c_arr_3x0)
         

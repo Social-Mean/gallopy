@@ -100,8 +100,8 @@ class MyTestCase(unittest.TestCase):
                 mid_y = np.mean(triangulation.y[row])
                 plt.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
         plt.savefig("./outputs/tri_mesh.pdf")
-        
-        solver = FEMSolver2D(1, 1, 0, 0, [])
+        force_func = lambda x, y: x+y
+        solver = FEMSolver2D(1, 1, 0, force_func, [])
         solver.solve(triangulation)
 
 
