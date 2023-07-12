@@ -105,15 +105,21 @@ class MyTestCase(unittest.TestCase):
         # print(triangulation.triangles)
         # print(triangulation.x, triangulation.y)
         
-        force_func = lambda x, y: x+y
+        # force_func = lambda x, y: 1
+        force_func = 1
         solver = FEMSolver2D(1, 1, 0, force_func, [])
-        fig, ax = solver.plot_mesh(triangulation)
+        Phi = solver.solve(triangulation)
+
+        fig, ax = solver.plot_mesh()
         fig.savefig("./outputs/tri_mesh.pdf")
         
-        fig, ax = solver.plot_K_mat(triangulation)
+        fig, ax = solver.plot_K_mat()
         fig.savefig("./outputs/K_mat.pdf")
         
-        solver.solve(triangulation)
+        
+        fig, ax = solver.tripcolor(Phi)
+        fig.savefig("./outputs/Phi.pdf")
+
         
 
 if __name__ == '__main__':

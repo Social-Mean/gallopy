@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from typing import Union, Callable, Sequence, Annotated, Literal
+from typing import Union, Callable, Sequence, Annotated, Literal, Optional
 from numbers import Number
 from numpy.typing import ArrayLike, NDArray
 from numpy.linalg import inv, pinv
@@ -129,6 +129,10 @@ class FEMSolver2D(object):
         self.alpha_y_func = alpha_y_func
         self.beta_func = beta_func
         self.f_func = f_func
+        
+        self.triangulation: Optional[Triangulation] = None
+        self.K_mat: Optional[ArrayLike] = None
+        
         self.boundary_conditions = boundary_conditions
         
         self.dirichlet_boundary_condition_list = []
@@ -154,6 +158,7 @@ class FEMSolver2D(object):
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         for i in range(len(func_lst)):
             if isinstance(func_lst[i], Callable):
+                # TODO: 应该使用每个单元的值, 而不是节点处的值
                 param_lst.append(func_lst[i](x_arr_3xN, y_arr_3xN))
             else:
                 param_lst.append(np.ones(area_num) * func_lst[i])
@@ -162,6 +167,8 @@ class FEMSolver2D(object):
         return alpha_x, alpha_y, beta, f
     
     def solve(self, triangulation: Triangulation):
+        self.triangulation = triangulation
+        
         ns_mat = triangulation.triangles
         
         x_arr = triangulation.x
@@ -177,6 +184,7 @@ class FEMSolver2D(object):
         K_arr_3x3xN = self._cal_K_arr_3x3xN(alpha_x, alpha_y, beta, Delta_arr, b_arr_3xN, c_arr_3xN)
         
         K_mat = self._cal_K_mat(ns_mat, K_arr_3x3xN)
+        self.K_mat = K_mat
         # plt.figure()
         # tmp1 = np.max(K_mat.flatten())
         # tmp2 = np.min(K_mat.flatten())
@@ -186,26 +194,29 @@ class FEMSolver2D(object):
         # plt.savefig("./outputs/K_mat.pdf")
         b_mat_arr_3xN = self._cal_b_mat_arr_3xN(Delta_arr, f)
         b_mat = self._cal_b_mat(ns_mat, b_mat_arr_3xN)
-        fig, ax = plt.subplots()
+        
         # Phi = inv(K_mat) @ b_mat
         Phi = np.linalg.solve(K_mat, b_mat)
         Phi = (Phi - np.min(Phi)) / (np.max(Phi)-np.min(Phi))
         
-        X_arr, Y_arr = np.meshgrid(x_arr, y_arr)
-        # ax.pcolormesh(X_arr, Y_arr, Phi)
-        color = np.zeros((len(Phi), 3))
-        color[:, 2] = Phi
-        # ax.scatter(x_arr, y_arr, c=color)
-        # ax.pcolormesh()
-        ax.tripcolor(x_arr, y_arr, Phi, triangles=triangulation.triangles, linewidth=0, rasterized=True)
+        return Phi
+
+
+        
+    def tripcolor(self, Phi):
+        x_arr = self.triangulation.x
+        y_arr = self.triangulation.y
+        triangles = self.triangulation.triangles
+        
+        fig, ax = plt.subplots()
+        ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True)
         # ax.triplot(x_arr, y_arr, Phi, triangles=triangulation.triangles)
         ax.set_xlim((0, 1))
         ax.set_ylim((0, 1))
         ax.set_box_aspect(1)
         ax.set_xticks([])
         ax.set_yticks([])
-        fig.savefig("./outputs/Phi.pdf")
-        
+        return fig, ax
     
     def _cal_xy_arr_3xN(self, ns_mat, x_arr, y_arr):
         x_arr_3xN = np.zeros(np.shape(ns_mat.transpose()))
@@ -244,7 +255,12 @@ class FEMSolver2D(object):
                 tmp1 = alpha_x * b_arr_3xN[i] * b_arr_3xN[j] + alpha_y * c_arr_3xN[i] * c_arr_3xN[j]
                 tmp2 = beta * (1 + kronecker_delta(i, j))
                 K_arr_3x3xN[i, j] = tmp1 / (4 * Delta_arr) + Delta_arr / 12 * tmp2
-        
+                
+        # tmp1 = alpha_x * b_arr_3xN * b_arr_3xN + alpha_y * c_arr_3xN * c_arr_3xN
+        # for i in range(3):
+        #     for j in range(3):
+        #         tmp2 = beta * (1 + kronecker_delta(i, j))
+        #         K_arr_3x3xN[i, j] = tmp1 / (4 * Delta_arr) + Delta_arr / 12 * tmp2
         return K_arr_3x3xN
     
     def _cal_abc_arr_3xN(self, ns_mat, x_arr_3xN, y_arr_3xN):
@@ -308,10 +324,12 @@ class FEMSolver2D(object):
         b_mat_arr_3xN = np.zeros((3, len(Delta_arr)))
         for e in range(len(Delta_arr)):
             for i in range(3):
-                b_mat_arr_3xN[i, e] = Delta_arr[e] * f[i, e] / 3
+                b_mat_arr_3xN[i, e] = Delta_arr[e] * f[e] / 3
         return b_mat_arr_3xN
     
-    def plot_mesh(self, triangulation: Triangulation):
+    def plot_mesh(self, triangulation: Triangulation = None):
+        if triangulation is None:
+            triangulation = self.triangulation
         fig, ax = plt.subplots()
         ax.triplot(triangulation, color="k")
         # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
@@ -334,26 +352,28 @@ class FEMSolver2D(object):
                 ax.set_title("Triangular Mesh")
         return fig, ax
 
-    def plot_K_mat(self, triangulation: Triangulation):
-        ns_mat = triangulation.triangles
-        
-        x_arr = triangulation.x
-        y_arr = triangulation.y
-        
-        x_arr_3xN, y_arr_3xN = self._cal_xy_arr_3xN(ns_mat, x_arr, y_arr)
-        
-        alpha_x, alpha_y, beta, f = self._cal_param_arr(ns_mat, x_arr_3xN, y_arr_3xN)
-        a_arr_3xN, b_arr_3xN, c_arr_3xN = self._cal_abc_arr_3xN(ns_mat, x_arr_3xN, y_arr_3xN)
-        Delta_arr = self._cal_Delta_arr(b_arr_3xN, c_arr_3xN)
-        
-        K_arr_3x3xN = self._cal_K_arr_3x3xN(alpha_x, alpha_y, beta, Delta_arr, b_arr_3xN, c_arr_3xN)
-        
-        K_mat = self._cal_K_mat(ns_mat, K_arr_3x3xN)
-        tmp1 = np.max(K_mat.flatten())
-        tmp2 = np.min(K_mat.flatten())
+    def plot_K_mat(self):
+        # if triangulation is None:
+        #     triangulation = self.triangulation
+        # ns_mat = triangulation.triangles
+        #
+        # x_arr = triangulation.x
+        # y_arr = triangulation.y
+        #
+        # x_arr_3xN, y_arr_3xN = self._cal_xy_arr_3xN(ns_mat, x_arr, y_arr)
+        #
+        # alpha_x, alpha_y, beta, f = self._cal_param_arr(ns_mat, x_arr_3xN, y_arr_3xN)
+        # a_arr_3xN, b_arr_3xN, c_arr_3xN = self._cal_abc_arr_3xN(ns_mat, x_arr_3xN, y_arr_3xN)
+        # Delta_arr = self._cal_Delta_arr(b_arr_3xN, c_arr_3xN)
+        #
+        # K_arr_3x3xN = self._cal_K_arr_3x3xN(alpha_x, alpha_y, beta, Delta_arr, b_arr_3xN, c_arr_3xN)
+        #
+        # K_mat = self._cal_K_mat(ns_mat, K_arr_3x3xN)
+        tmp1 = np.max(self.K_mat.flatten())
+        tmp2 = np.min(self.K_mat.flatten())
         tmp = max(tmp1, -tmp2)
         fig, ax = plt.subplots()
-        im = ax.matshow(K_mat, cmap="seismic", vmin=-tmp, vmax=tmp)
+        im = ax.matshow(self.K_mat, cmap="seismic", vmin=-tmp, vmax=tmp)
         cb = fig.colorbar(im, ax=ax)
         
         ax.set_title("$K$ Matrix")
