@@ -135,7 +135,7 @@ class MyTestCase(unittest.TestCase):
 
         
         solver = FEMSolver2D(1, 1, 0, f_func, [])
-        # Phi = solver(triangulation)
+        Phi = solver(triangulation)
         solver.triangulation = triangulation
         
         fig, ax = solver.plot_mesh(show_tag=True)

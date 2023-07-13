@@ -4,7 +4,7 @@ from typing import Union, Callable, Sequence, Annotated, Literal, Optional
 from numbers import Number
 from numpy.typing import ArrayLike, NDArray
 from numpy.linalg import inv, pinv
-from scipy.sparse import dia_matrix
+from scipy.sparse import dia_matrix, coo_matrix, lil_array
 from scipy.sparse.linalg import lsqr, spsolve
 from scipy.linalg import solve_banded, solveh_banded
 from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
@@ -176,6 +176,7 @@ class FEMSolver2D(object):
         self.b_mat_arr_3xN = None
         self.b_mat = None
         self.N_arr_3xN = None
+        self.Phi = None
     
     def __call__(self, triangulation: Triangulation):
         return self.solve(triangulation)
@@ -315,24 +316,26 @@ class FEMSolver2D(object):
         if triangulation is not None:
             self.triangulation = triangulation
         assert self.triangulation is not None, "请指定三角形网格."
-        
-        Phi = np.linalg.solve(self.K_mat, self.b_mat)
+        K_csr = self.K_mat.tocsr()
+        # Phi = np.linalg.solve(self.K_mat, self.b_mat)
         # Phi = (Phi - np.min(Phi)) / (np.max(Phi)-np.min(Phi))
+        self.Phi = spsolve(K_csr, self.b_mat)
         
-        return Phi
+        return self.Phi
 
 
         
     def tripcolor(self, *, show_mesh=True):
-        Phi = self.solve()
+        if self.Phi is None:
+            self.Phi = self.solve()
         x_arr = self.triangulation.x
         y_arr = self.triangulation.y
         triangles = self.triangulation.triangles
         
         fig, ax = plt.subplots()
-        vmin = np.min(Phi)
-        vmax = np.max(Phi)
-        im = ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax)
+        vmin = np.min(self.Phi)
+        vmax = np.max(self.Phi)
+        im = ax.tripcolor(x_arr, y_arr, self.Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax)
         
         # 画网格
         if show_mesh:
@@ -357,7 +360,8 @@ class FEMSolver2D(object):
         return fig, ax
     
     def trisurface(self, *, show_mesh=True):
-        Phi = self.solve()
+        if self.Phi is None:
+            self.Phi = self.solve()
         x_arr = self.triangulation.x
         y_arr = self.triangulation.y
         triangles = self.triangulation.triangles
@@ -365,9 +369,9 @@ class FEMSolver2D(object):
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         ax.set_proj_type("ortho")
         # ax.set_zlim3d(zmin=0)
-        vmin = np.min(Phi)
-        vmax = np.max(Phi)
-        im = ax.plot_trisurf(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax, cmap="viridis")
+        vmin = np.min(self.Phi)
+        vmax = np.max(self.Phi)
+        im = ax.plot_trisurf(x_arr, y_arr, self.Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax, cmap="viridis")
         
         # 画网格
         # if show_mesh:
@@ -446,9 +450,10 @@ class FEMSolver2D(object):
         
         return a_arr_3xN, b_arr_3xN, c_arr_3xN
     
-    def _cal_K_mat(self) -> np.ndarray:
+    def _cal_K_mat(self) -> lil_array:
         dimension = np.max(self.ns_mat.flatten()) + 1
-        K_mat = np.zeros((dimension, dimension))
+        # K_mat = np.zeros((dimension, dimension))
+        K_mat = lil_array((dimension, dimension))
         for e in range(np.shape(self.ns_mat)[0]):
             for i in range(3):
                 row = self.ns_mat[e, i]
@@ -507,12 +512,13 @@ class FEMSolver2D(object):
     def plot_K_mat(self):  # TODO: 增加 **kwarg, 以自定义cmap等
         # tmp1 =
         # tmp2 = np.min(self.K_mat.flatten())
-        max_abs_K = np.max(np.abs(self.K_mat.flatten()))
+        K_mat_arr = self.K_mat.toarray()
+        max_abs_K = np.max(np.abs(K_mat_arr.flatten()))
         fig, ax = plt.subplots()
-        im = ax.matshow(self.K_mat/max_abs_K, cmap="seismic", vmin=-1, vmax=1)
+        im = ax.matshow(K_mat_arr/max_abs_K, cmap="seismic", vmin=-1, vmax=1)
         cb = fig.colorbar(im, ax=ax)
         
-        tmp_len = np.shape(self.K_mat)[0]
+        tmp_len = np.shape(K_mat_arr)[0]
         # ax.set_xlim((0, tmp_len))
         # ax.set_ylim((0, tmp_len))
         ax.tick_params(axis="both", direction="out")
