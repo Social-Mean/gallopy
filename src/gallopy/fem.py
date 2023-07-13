@@ -249,7 +249,9 @@ class FEMSolver2D(object):
         triangles = self.triangulation.triangles
         
         fig, ax = plt.subplots()
-        im = ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True)
+        vmin = np.min(Phi)
+        vmax = np.max(Phi)
+        im = ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax)
         
         # 画网格
         if show_mesh:
@@ -257,6 +259,40 @@ class FEMSolver2D(object):
         
         # colorbar
         cb = plt.colorbar(im, ax=ax, pad=0)
+        # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
+
+        
+        ax.set_title(r"$𝛷(x, y)$")
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        
+        
+        
+        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
+        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
+        ax.set_box_aspect(1)
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        return fig, ax
+    
+    def trisurface(self, *, show_mesh=True):
+        Phi = self.solve()
+        x_arr = self.triangulation.x
+        y_arr = self.triangulation.y
+        triangles = self.triangulation.triangles
+        
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        vmin = np.min(Phi)
+        vmax = np.max(Phi)
+        im = ax.plot_trisurf(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax, cmap="viridis")
+        
+        # 画网格
+        # if show_mesh:
+        #     ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
+        
+        # colorbar
+        cb = plt.colorbar(im, ax=ax, pad=0)
+        # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
         
         ax.set_title(r"$𝛷(x, y)$")
         ax.set_xlabel("$x$")
@@ -264,7 +300,7 @@ class FEMSolver2D(object):
         
         ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
         ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
-        ax.set_box_aspect(1)
+        # ax.set_box_aspect(1)
         # ax.set_xticks([])
         # ax.set_yticks([])
         return fig, ax
@@ -288,7 +324,7 @@ class FEMSolver2D(object):
     
     def _cal_N_arr_3xN(self) -> ArrayLike:
         # N_arr = kronecker_delta()
-        N_arr_3xN = [[0 for col in range(self.N)] for row in range(3)]
+        N_arr_3xN = [[None for col in range(self.N)] for row in range(3)]
         for j in range(3):
             for e in range(self.N):
                 N_arr_3xN[j][e] = lambda x, y: (self.a_arr_3xN[j, e] + self.b_arr_3xN[j, e]*x + self.c_arr_3xN[j, e]*y) / (2*self.Delta_arr[e])

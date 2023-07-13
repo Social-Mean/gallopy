@@ -113,9 +113,11 @@ class MyTestCase(unittest.TestCase):
         
         triangulation = mpl.tri.Triangulation(x, y)
         
+        alpha_x = lambda x, y: 1
+        f_func = lambda x, y: x + y + x*y
+        # f_func = lambda x, y: 1
         # f_func = 1
-        alpha_x = lambda x, y: x*y
-        f_func = lambda x, y: x+y
+
         
         solver = FEMSolver2D(alpha_x, 1, 0, f_func, [])
         Phi = solver(triangulation)
@@ -130,6 +132,11 @@ class MyTestCase(unittest.TestCase):
             # show_mesh=False
         )
         fig.savefig("./outputs/Phi.pdf")
+        
+        fig, ax = solver.trisurface(
+            # show_mesh=False
+        )
+        fig.savefig("./outputs/trisurface.pdf")
     
     def test_change_tri(self):
         pt_num = 20
