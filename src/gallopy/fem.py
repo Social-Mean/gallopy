@@ -118,6 +118,13 @@ class FEMSolver1D(object):
 #     def __init__(self):
 
 
+def _find_same_element(A, B):
+    for a in A:
+        for b in B:
+            if a == b:
+                return a
+
+
 class FEMSolver2D(object):
     def __init__(self,
                  alpha_x_func: Union[Callable[[float, float], float], float],
@@ -193,6 +200,8 @@ class FEMSolver2D(object):
         self.K_mat = self._cal_K_mat()
         self.b_mat_arr_3xN = self._cal_b_mat_arr_3xN()
         self.b_mat = self._cal_b_mat()
+        self._impose_boundary_conditions()
+
     
     def _cal_param_arr(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         
@@ -228,7 +237,79 @@ class FEMSolver2D(object):
         
         return alpha_x, alpha_y, beta, f
     
-    
+    def _impose_boundary_conditions(self):
+        finder = self.triangulation.get_trifinder()
+        num = 50
+        # x1 = 0 * np.ones(num)
+        # x2 = 1 * np.ones(num)
+        # xs = np.linspace(0, 1, num)
+        #
+        # y1 = 0 * np.ones(num)
+        # y2 = 1 * np.ones(num)
+        # ys = np.linspace(0, 1, num)
+        # es = []
+        # es+=(list(finder(x1, ys)))
+        # es+=(list(finder(x2, ys)))
+        # es+=(list(finder(xs, y1)))
+        # es+=(list(finder(xs, y2)))
+        # print(es)
+        size = np.shape(self.K_mat)[0]
+        # for e in es:
+        #     for node_tag in self.ns_mat[e]:
+        #         self.K_mat[node_tag] = np.zeros(size)
+        #         self.K_mat[node_tag, node_tag] = 1
+        #         self.b_mat[node_tag] = 0
+        # edges = self.triangulation.edges
+        # for edge in edges:
+        #     idx1, idx2 = edge
+        #     if (self.x_arr[idx1] in [0, 1] and self.x_arr[idx2] in [0, 1]) or (self.y_arr[idx1] in [0, 1] and self.y_arr[idx2] in [0, 1]):
+        #         self.K_mat[idx1] = np.zeros(size)
+        #         self.K_mat[idx1, idx1] = 1
+        #         self.b_mat[idx1] = 0
+        #
+        #         self.K_mat[idx2] = np.zeros(size)
+        #         self.K_mat[idx2, idx2] = 1
+        #         self.b_mat[idx2] = 0
+        
+        # 边缘三角形的邻居共同包含的节点是非边界节点
+        boundary_tri_idx = []
+        boundary_node_tag = []
+        for i, lst in enumerate(self.triangulation.neighbors):
+            if -1 in lst:
+                boundary_tri_idx.append(i)
+                neighbor_tag_lst = []
+                for tri_tag in lst:
+                    if tri_tag != -1:
+                        neighbor_tag_lst.append(tri_tag)
+                # for tri_tag in neighbor_tag_lst:
+                if len(neighbor_tag_lst) == 1:
+                    A_lst = self.triangulation.triangles[neighbor_tag_lst[0]]
+                    for idx in self.triangulation.triangles[i]:
+                        if idx not in A_lst:
+                            boundary_node_tag.append(idx)
+                    continue
+                A_lst = self.triangulation.triangles[neighbor_tag_lst[0]]
+                B_lst = self.triangulation.triangles[neighbor_tag_lst[1]]
+                
+                node_tag = _find_same_element(A_lst, B_lst)
+                if node_tag is not None:
+                    for idx in self.triangulation.triangles[i]:
+                        if idx != node_tag:
+                            boundary_node_tag.append(idx)
+        
+        for idx in boundary_node_tag:
+            self.K_mat[idx] = np.zeros(size)
+            self.K_mat[idx, idx] = 1
+            if self.y_arr[idx] == 0 and self.x_arr[idx] not in [0, 1]:
+                self.b_mat[idx] = 0.2
+            elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
+                self.b_mat[idx] = 0.4
+            elif self.x_arr[idx] == 0:
+                self.b_mat[idx] = 0.5
+            else:
+                self.b_mat[idx] = 0.3
+        
+        pass
     
     def solve(self, triangulation: Triangulation = None):
         if triangulation is not None:
@@ -236,7 +317,7 @@ class FEMSolver2D(object):
         assert self.triangulation is not None, "请指定三角形网格."
         
         Phi = np.linalg.solve(self.K_mat, self.b_mat)
-        Phi = (Phi - np.min(Phi)) / (np.max(Phi)-np.min(Phi))
+        # Phi = (Phi - np.min(Phi)) / (np.max(Phi)-np.min(Phi))
         
         return Phi
 
@@ -258,11 +339,11 @@ class FEMSolver2D(object):
             ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
         
         # colorbar
-        cb = plt.colorbar(im, ax=ax, pad=0)
+        cb = plt.colorbar(im, ax=ax)
         # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
 
         
-        ax.set_title(r"$𝛷(x, y)$")
+        ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
         ax.set_xlabel("$x$")
         ax.set_ylabel("$y$")
         
@@ -282,6 +363,8 @@ class FEMSolver2D(object):
         triangles = self.triangulation.triangles
         
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        ax.set_proj_type("ortho")
+        # ax.set_zlim3d(zmin=0)
         vmin = np.min(Phi)
         vmax = np.max(Phi)
         im = ax.plot_trisurf(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax, cmap="viridis")
@@ -291,10 +374,10 @@ class FEMSolver2D(object):
         #     ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
         
         # colorbar
-        cb = plt.colorbar(im, ax=ax, pad=0)
+        cb = plt.colorbar(im, ax=ax)
         # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
         
-        ax.set_title(r"$𝛷(x, y)$")
+        ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
         ax.set_xlabel("$x$")
         ax.set_ylabel("$y$")
         

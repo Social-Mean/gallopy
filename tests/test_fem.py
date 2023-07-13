@@ -89,11 +89,24 @@ class MyTestCase(unittest.TestCase):
             x.append(1)
             y.append(1)
             
+
+            
+            x1 = 0
+            x2 = 1
+            num = int(np.floor(np.sqrt(pt_num)))
+            x1s = list(np.ones(num)*x1)[1:-1]
+            x2s = list(np.ones(num)*x2)[1:-1]
+            xs = list(np.linspace(0, 1, num))[1:-1]
+            x_edge = x1s + x2s + xs + xs
+            y_edge = xs + xs + x1s + x2s
+            
+            # x = 2*x - 1
+            # y = 2*y - 1
+            x += x_edge
+            y += y_edge
+            
             x = np.array(x)
             y = np.array(y)
-            
-            x = 2*x - 1
-            y = 2*y - 1
             return x, y
         
         def create_regular_mesh(pt_num):
@@ -105,22 +118,25 @@ class MyTestCase(unittest.TestCase):
             y = y.flatten()
             return x, y
         
-        pt_num = 1000
+        pt_num = 10000
         
         x, y = create_random_mesh(pt_num)
         
         # x, y = create_regular_mesh(pt_num)
         
         triangulation = mpl.tri.Triangulation(x, y)
-        
-        alpha_x = lambda x, y: 1
-        f_func = lambda x, y: x + y + x*y
+        # print(triangulation.get_trifinder()(0, 0))
+        # print(triangulation.neighbors)
+        # print(triangulation.edges)
+        # alpha_x = lambda x, y: 1
+        f_func = lambda x, y: 2*np.pi**2 * np.sin(np.pi*x) * np.sin(np.pi*y)
         # f_func = lambda x, y: 1
-        # f_func = 1
+        f_func = 0
 
         
-        solver = FEMSolver2D(alpha_x, 1, 0, f_func, [])
-        Phi = solver(triangulation)
+        solver = FEMSolver2D(1, 1, 0, f_func, [])
+        # Phi = solver(triangulation)
+        solver.triangulation = triangulation
         
         fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")
@@ -129,7 +145,7 @@ class MyTestCase(unittest.TestCase):
         fig.savefig("./outputs/K_mat.pdf")
         
         fig, ax = solver.tripcolor(
-            # show_mesh=False
+            show_mesh=False
         )
         fig.savefig("./outputs/Phi.pdf")
         
