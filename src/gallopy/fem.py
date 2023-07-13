@@ -10,7 +10,7 @@ from scipy.linalg import solve_banded, solveh_banded
 from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
 from matplotlib.tri import Triangulation
 from .matrix import kronecker_delta
-
+import cmcrameri.cm as cmc
 
 class FEMSolver1D(object):
     def __init__(self,
@@ -151,6 +151,7 @@ class FEMSolver2D(object):
         # 中间变量
         self._triangulation = triangulation
         self.ns_mat = None
+        self.N = None
         self.x_arr = None
         self.y_arr = None
         self.x_arr_3xN = None
@@ -167,6 +168,11 @@ class FEMSolver2D(object):
         self.K_mat: Optional[np.ndarray] = None
         self.b_mat_arr_3xN = None
         self.b_mat = None
+        self.N_arr_3xN = None
+    
+    def __call__(self, triangulation: Triangulation):
+        return self.solve(triangulation)
+        
         
     @property
     def triangulation(self):
@@ -175,12 +181,14 @@ class FEMSolver2D(object):
     def triangulation(self, input_tri: Triangulation):
         self._triangulation = input_tri
         self.ns_mat = self._triangulation.triangles
+        self.N = np.shape(self.ns_mat)[0]
         self.x_arr = self._triangulation.x
         self.y_arr = self._triangulation.y
         self.x_arr_3xN, self.y_arr_3xN = self._cal_xy_arr_3xN()
-        self.alpha_x, self.alpha_y, self.beta, self.f = self._cal_param_arr()
         self.a_arr_3xN, self.b_arr_3xN, self.c_arr_3xN = self._cal_abc_arr_3xN()
         self.Delta_arr = self._cal_Delta_arr()
+        self.N_arr_3xN = self._cal_N_arr_3xN()
+        self.alpha_x, self.alpha_y, self.beta, self.f = self._cal_param_arr()
         self.K_arr_3x3xN = self._cal_K_arr_3x3xN()
         self.K_mat = self._cal_K_mat()
         self.b_mat_arr_3xN = self._cal_b_mat_arr_3xN()
@@ -196,7 +204,24 @@ class FEMSolver2D(object):
         for i in range(len(func_lst)):
             if isinstance(func_lst[i], Callable):
                 # FIXME: 应该使用每个单元的值, 而不是节点处的值
-                param_lst.append(func_lst[i](self.x_arr_3xN, self.y_arr_3xN))
+                # param_lst.append(func_lst[i](self.x_arr_3xN, self.y_arr_3xN))
+                # 尝试使用三个节点的均值作为单元的值
+                # TODO: 验证使用均值的正确性
+                # Phi_arr_3xN = func_lst[i](self.x_arr_3xN, self.y_arr_3xN)
+                # Phi_arr_mean_1xN = np.mean(Phi_arr_3xN, axis=0)
+                # param_lst.append(Phi_arr_mean_1xN)
+                
+                
+                # 尝试使用差值函数
+                Phi_1xN = np.zeros(self.N)
+                for e in range(self.N):
+                    Phi_e_i = np.zeros(3)
+                    for j in range(3):
+                        N_j_e = self.N_arr_3xN[j][e](self.x_arr_3xN[j, e], self.y_arr_3xN[j, e])
+                        Phi_j_e = func_lst[i](self.x_arr_3xN[j, e], self.y_arr_3xN[j, e])
+                        Phi_e_i[j] = N_j_e * Phi_j_e
+                    Phi_1xN[e] = np.sum(Phi_e_i)
+                param_lst.append(Phi_1xN)
             else:
                 param_lst.append(np.ones(area_num) * func_lst[i])
         alpha_x, alpha_y, beta, f = param_lst
@@ -224,17 +249,24 @@ class FEMSolver2D(object):
         triangles = self.triangulation.triangles
         
         fig, ax = plt.subplots()
-        ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True)
+        im = ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True)
         
         # 画网格
         if show_mesh:
             ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
         
-        ax.set_xlim((0, 1))
-        ax.set_ylim((0, 1))
+        # colorbar
+        cb = plt.colorbar(im, ax=ax, pad=0)
+        
+        ax.set_title(r"$𝛷(x, y)$")
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        
+        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
+        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
         ax.set_box_aspect(1)
-        ax.set_xticks([])
-        ax.set_yticks([])
+        # ax.set_xticks([])
+        # ax.set_yticks([])
         return fig, ax
     
     def _cal_xy_arr_3xN(self):
@@ -254,9 +286,14 @@ class FEMSolver2D(object):
         Delta_arr = (self.b_arr_3xN[0] * self.c_arr_3xN[1] - self.b_arr_3xN[1] * self.c_arr_3xN[0]) / 2
         return Delta_arr
     
-    def _cal_N_arr(self) -> ArrayLike:
+    def _cal_N_arr_3xN(self) -> ArrayLike:
         # N_arr = kronecker_delta()
-        pass
+        N_arr_3xN = [[0 for col in range(self.N)] for row in range(3)]
+        for j in range(3):
+            for e in range(self.N):
+                N_arr_3xN[j][e] = lambda x, y: (self.a_arr_3xN[j, e] + self.b_arr_3xN[j, e]*x + self.c_arr_3xN[j, e]*y) / (2*self.Delta_arr[e])
+        
+        return N_arr_3xN
     
     def _cal_K_arr_3x3xN(self) -> ArrayLike:
         arr_len = len(self.Delta_arr)
@@ -339,22 +376,28 @@ class FEMSolver2D(object):
                             backgroundcolor="r",
                             color="w",
                             bbox=dict(boxstyle="circle"))
-                
-        ax.set_xlim((0, 1))
-        ax.set_ylim((0, 1))
-        ax.set_box_aspect(1)
+        
         ax.set_title("Triangular Mesh")
+        ax.set_xlabel("$x$")
+        ax.set_ylabel("$y$")
+        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
+        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
+        ax.set_box_aspect(1)
         return fig, ax
 
     def plot_K_mat(self):  # TODO: 增加 **kwarg, 以自定义cmap等
-        tmp1 = np.max(self.K_mat.flatten())
-        tmp2 = np.min(self.K_mat.flatten())
-        tmp = max(tmp1, -tmp2)
+        # tmp1 =
+        # tmp2 = np.min(self.K_mat.flatten())
+        max_abs_K = np.max(np.abs(self.K_mat.flatten()))
         fig, ax = plt.subplots()
-        im = ax.matshow(self.K_mat, cmap="seismic", vmin=-tmp, vmax=tmp)
+        im = ax.matshow(self.K_mat/max_abs_K, cmap="seismic", vmin=-1, vmax=1)
         cb = fig.colorbar(im, ax=ax)
         
-        ax.set_title("$K$ Matrix")
+        tmp_len = np.shape(self.K_mat)[0]
+        # ax.set_xlim((0, tmp_len))
+        # ax.set_ylim((0, tmp_len))
+        ax.tick_params(axis="both", direction="out")
+        ax.set_title(r"$K/\max|K|$ Matrix")
         
         return fig, ax
         

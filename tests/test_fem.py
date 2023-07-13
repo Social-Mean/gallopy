@@ -70,45 +70,55 @@ class MyTestCase(unittest.TestCase):
         node = np.zeros((3, 8))
     
     def test_mpl_tri(self):
-        pt_num = 200
-        x = np.random.random(pt_num)
-        y = np.random.random(pt_num)
+        def create_random_mesh(pt_num):
+            x = np.random.random(pt_num)
+            y = np.random.random(pt_num)
+    
+            x = list(x)
+            y = list(y)
+    
+            x.append(0)
+            y.append(0)
+    
+            x.append(0)
+            y.append(1)
+    
+            x.append(1)
+            y.append(0)
+    
+            x.append(1)
+            y.append(1)
+            
+            x = np.array(x)
+            y = np.array(y)
+            
+            x = 2*x - 1
+            y = 2*y - 1
+            return x, y
         
-        x = list(x)
-        y = list(y)
+        def create_regular_mesh(pt_num):
+            num = int(np.floor(np.sqrt(pt_num)))
+            x = np.linspace(0, 1, num)
+            y = np.linspace(0, 1, num)
+            x, y = np.meshgrid(x, y)
+            x = x.flatten()
+            y = y.flatten()
+            return x, y
         
-        x.append(0)
-        y.append(0)
+        pt_num = 1000
         
-        x.append(0)
-        y.append(1)
+        x, y = create_random_mesh(pt_num)
         
-        x.append(1)
-        y.append(0)
-        
-        x.append(1)
-        y.append(1)
-        # x = np.array([0, 0, 2, 2])
-        # y = np.array([0, 1, 0, 1])
-        
-        num = int(np.floor(np.sqrt(pt_num)))
-        # x = np.linspace(0, 1, num)
-        # y = np.linspace(0, 1, num)
-        # x, y = np.meshgrid(x, y)
-        # x = x.flatten()
-        # y = y.flatten()
+        # x, y = create_regular_mesh(pt_num)
         
         triangulation = mpl.tri.Triangulation(x, y)
-        # print(triangulation.triangles)
-        # print(triangulation.x, triangulation.y)
         
-        # force_func = lambda x, y: x * y
-        f_func = 1
-        # def force_func(x, y):
-        #     return 1
-        print(type(f_func))
-        solver = FEMSolver2D(1, 1, 0, f_func, [])
-        Phi = solver.solve(triangulation)
+        # f_func = 1
+        alpha_x = lambda x, y: x*y
+        f_func = lambda x, y: x+y
+        
+        solver = FEMSolver2D(alpha_x, 1, 0, f_func, [])
+        Phi = solver(triangulation)
         
         fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")
