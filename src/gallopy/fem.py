@@ -124,14 +124,15 @@ class FEMSolver2D(object):
                  alpha_y_func: Union[Callable[[float, float], float], float],
                  beta_func: Union[Callable[[float, float], float], float],
                  f_func: Union[Callable[[float, float], float], float],
-                 boundary_conditions: Sequence[BoundaryCondition]):
+                 boundary_conditions: Sequence[BoundaryCondition],
+                 *,
+                 triangulation: Optional[Triangulation] = None):
         self.alpha_x_func = alpha_x_func
         self.alpha_y_func = alpha_y_func
         self.beta_func = beta_func
         self.f_func = f_func
         
-        self.triangulation: Optional[Triangulation] = None
-        self.K_mat: Optional[ArrayLike] = None
+        
         
         self.boundary_conditions = boundary_conditions
         
@@ -145,72 +146,90 @@ class FEMSolver2D(object):
                 self.dirichlet_boundary_condition_list.append(condition)
             else:
                 pass
-    
-    def _cal_param_arr(self,
-                       ns_mat: ArrayLike,
-                       x_arr_3xN: ArrayLike,
-                       y_arr_3xN: ArrayLike) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+            
+            
+        # 中间变量
+        self._triangulation = triangulation
+        self.ns_mat = None
+        self.x_arr = None
+        self.y_arr = None
+        self.x_arr_3xN = None
+        self.y_arr_3xN = None
+        self.alpha_x = None
+        self.alpha_y = None
+        self.beta = None
+        self.f = None
+        self.a_arr_3xN = None
+        self.b_arr_3xN = None
+        self.c_arr_3xN = None
+        self.Delta_arr = None
+        self.K_arr_3x3xN = None
+        self.K_mat: Optional[np.ndarray] = None
+        self.b_mat_arr_3xN = None
+        self.b_mat = None
         
-        area_num = np.shape(ns_mat)[0]
+    @property
+    def triangulation(self):
+        return self._triangulation
+    @triangulation.setter
+    def triangulation(self, input_tri: Triangulation):
+        self._triangulation = input_tri
+        self.ns_mat = self._triangulation.triangles
+        self.x_arr = self._triangulation.x
+        self.y_arr = self._triangulation.y
+        self.x_arr_3xN, self.y_arr_3xN = self._cal_xy_arr_3xN()
+        self.alpha_x, self.alpha_y, self.beta, self.f = self._cal_param_arr()
+        self.a_arr_3xN, self.b_arr_3xN, self.c_arr_3xN = self._cal_abc_arr_3xN()
+        self.Delta_arr = self._cal_Delta_arr()
+        self.K_arr_3x3xN = self._cal_K_arr_3x3xN()
+        self.K_mat = self._cal_K_mat()
+        self.b_mat_arr_3xN = self._cal_b_mat_arr_3xN()
+        self.b_mat = self._cal_b_mat()
+    
+    def _cal_param_arr(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
+        
+        area_num = np.shape(self.ns_mat)[0]
         # alpha, beta, f 矩阵,
         func_lst = [self.alpha_x_func, self.alpha_y_func, self.beta_func, self.f_func]
         param_lst = []
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         for i in range(len(func_lst)):
             if isinstance(func_lst[i], Callable):
-                # TODO: 应该使用每个单元的值, 而不是节点处的值
-                param_lst.append(func_lst[i](x_arr_3xN, y_arr_3xN))
+                # FIXME: 应该使用每个单元的值, 而不是节点处的值
+                param_lst.append(func_lst[i](self.x_arr_3xN, self.y_arr_3xN))
             else:
                 param_lst.append(np.ones(area_num) * func_lst[i])
         alpha_x, alpha_y, beta, f = param_lst
         
         return alpha_x, alpha_y, beta, f
     
-    def solve(self, triangulation: Triangulation):
-        self.triangulation = triangulation
+    
+    
+    def solve(self, triangulation: Triangulation = None):
+        if triangulation is not None:
+            self.triangulation = triangulation
+        assert self.triangulation is not None, "请指定三角形网格."
         
-        ns_mat = triangulation.triangles
-        
-        x_arr = triangulation.x
-        y_arr = triangulation.y
-        
-        x_arr_3xN, y_arr_3xN = self._cal_xy_arr_3xN(ns_mat, x_arr, y_arr)
-        
-        alpha_x, alpha_y, beta, f = self._cal_param_arr(ns_mat, x_arr_3xN, y_arr_3xN)
-        a_arr_3xN, b_arr_3xN, c_arr_3xN = self._cal_abc_arr_3xN(ns_mat, x_arr_3xN, y_arr_3xN)
-        Delta_arr = self._cal_Delta_arr(b_arr_3xN, c_arr_3xN)
-        
-        N_arr = self._cal_N_arr(x_arr_3xN, y_arr_3xN)
-        K_arr_3x3xN = self._cal_K_arr_3x3xN(alpha_x, alpha_y, beta, Delta_arr, b_arr_3xN, c_arr_3xN)
-        
-        K_mat = self._cal_K_mat(ns_mat, K_arr_3x3xN)
-        self.K_mat = K_mat
-        # plt.figure()
-        # tmp1 = np.max(K_mat.flatten())
-        # tmp2 = np.min(K_mat.flatten())
-        # tmp = max(tmp1, -tmp2)
-        # plt.matshow(K_mat, cmap="seismic", vmin=-tmp, vmax=tmp)
-        # # plt.show()
-        # plt.savefig("./outputs/K_mat.pdf")
-        b_mat_arr_3xN = self._cal_b_mat_arr_3xN(Delta_arr, f)
-        b_mat = self._cal_b_mat(ns_mat, b_mat_arr_3xN)
-        
-        # Phi = inv(K_mat) @ b_mat
-        Phi = np.linalg.solve(K_mat, b_mat)
+        Phi = np.linalg.solve(self.K_mat, self.b_mat)
         Phi = (Phi - np.min(Phi)) / (np.max(Phi)-np.min(Phi))
         
         return Phi
 
 
         
-    def tripcolor(self, Phi):
+    def tripcolor(self, *, show_mesh=True):
+        Phi = self.solve()
         x_arr = self.triangulation.x
         y_arr = self.triangulation.y
         triangles = self.triangulation.triangles
         
         fig, ax = plt.subplots()
         ax.tripcolor(x_arr, y_arr, Phi, triangles=triangles, linewidth=0, rasterized=True)
-        # ax.triplot(x_arr, y_arr, Phi, triangles=triangulation.triangles)
+        
+        # 画网格
+        if show_mesh:
+            ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
+        
         ax.set_xlim((0, 1))
         ax.set_ylim((0, 1))
         ax.set_box_aspect(1)
@@ -218,157 +237,116 @@ class FEMSolver2D(object):
         ax.set_yticks([])
         return fig, ax
     
-    def _cal_xy_arr_3xN(self, ns_mat, x_arr, y_arr):
-        x_arr_3xN = np.zeros(np.shape(ns_mat.transpose()))
-        y_arr_3xN = np.zeros(np.shape(ns_mat.transpose()))
+    def _cal_xy_arr_3xN(self):
+        x_arr_3xN = np.zeros(np.shape(self.ns_mat.transpose()))
+        y_arr_3xN = np.zeros(np.shape(self.ns_mat.transpose()))
         
-        x_arr_3xN[0] = x_arr[ns_mat[:, 0]]
-        x_arr_3xN[1] = x_arr[ns_mat[:, 1]]
-        x_arr_3xN[2] = x_arr[ns_mat[:, 2]]
+        x_arr_3xN[0] = self.x_arr[self.ns_mat[:, 0]]
+        x_arr_3xN[1] = self.x_arr[self.ns_mat[:, 1]]
+        x_arr_3xN[2] = self.x_arr[self.ns_mat[:, 2]]
         
-        y_arr_3xN[0] = y_arr[ns_mat[:, 0]]
-        y_arr_3xN[1] = y_arr[ns_mat[:, 1]]
-        y_arr_3xN[2] = y_arr[ns_mat[:, 2]]
+        y_arr_3xN[0] = self.y_arr[self.ns_mat[:, 0]]
+        y_arr_3xN[1] = self.y_arr[self.ns_mat[:, 1]]
+        y_arr_3xN[2] = self.y_arr[self.ns_mat[:, 2]]
         
         return x_arr_3xN, y_arr_3xN
-    def _cal_Delta_arr(self, b_arr_3xN: ArrayLike, c_arr_3xN: ArrayLike) -> ArrayLike:
-        
-        Delta_arr = (b_arr_3xN[0] * c_arr_3xN[1] - b_arr_3xN[1] * c_arr_3xN[0]) / 2
+    def _cal_Delta_arr(self) -> ArrayLike:
+        Delta_arr = (self.b_arr_3xN[0] * self.c_arr_3xN[1] - self.b_arr_3xN[1] * self.c_arr_3xN[0]) / 2
         return Delta_arr
     
-    def _cal_N_arr(self, x_arr: ArrayLike, y_arr: ArrayLike) -> ArrayLike:
+    def _cal_N_arr(self) -> ArrayLike:
         # N_arr = kronecker_delta()
         pass
     
-    def _cal_K_arr_3x3xN(self,
-                         alpha_x: ArrayLike,
-                         alpha_y: ArrayLike,
-                         beta: ArrayLike,
-                         Delta_arr: ArrayLike,
-                         b_arr_3xN: ArrayLike,
-                         c_arr_3xN: ArrayLike) -> ArrayLike:
-        arr_len = len(Delta_arr)
+    def _cal_K_arr_3x3xN(self) -> ArrayLike:
+        arr_len = len(self.Delta_arr)
         K_arr_3x3xN = np.zeros((3, 3, arr_len))
         
         for i in range(3):
             for j in range(3):
-                tmp1 = alpha_x * b_arr_3xN[i] * b_arr_3xN[j] + alpha_y * c_arr_3xN[i] * c_arr_3xN[j]
-                tmp2 = beta * (1 + kronecker_delta(i, j))
-                K_arr_3x3xN[i, j] = tmp1 / (4 * Delta_arr) + Delta_arr / 12 * tmp2
+                tmp1 = self.alpha_x * self.b_arr_3xN[i] * self.b_arr_3xN[j] + self.alpha_y * self.c_arr_3xN[i] * self.c_arr_3xN[j]
+                tmp2 = self.beta * (1 + kronecker_delta(i, j))
+                K_arr_3x3xN[i, j] = tmp1 / (4 * self.Delta_arr) + self.Delta_arr / 12 * tmp2
                 
-        # tmp1 = alpha_x * b_arr_3xN * b_arr_3xN + alpha_y * c_arr_3xN * c_arr_3xN
-        # for i in range(3):
-        #     for j in range(3):
-        #         tmp2 = beta * (1 + kronecker_delta(i, j))
-        #         K_arr_3x3xN[i, j] = tmp1 / (4 * Delta_arr) + Delta_arr / 12 * tmp2
         return K_arr_3x3xN
     
-    def _cal_abc_arr_3xN(self, ns_mat, x_arr_3xN, y_arr_3xN):
-        arr_len = len(ns_mat)
+    def _cal_abc_arr_3xN(self):
+        arr_len = len(self.ns_mat)
         a_arr_3xN = np.zeros((3, arr_len))
         b_arr_3xN = np.zeros((3, arr_len))
         c_arr_3xN = np.zeros((3, arr_len))
         
-        # ns1, ns2, ns3 = np.hsplit(ns_mat, 3)
-        # ns1 = ns1.flatten()
-        # ns2 = ns2.flatten()
-        # ns3 = ns3.flatten()
-        #
-        # x1_arr = x_arr[ns1]
-        # x2_arr = x_arr[ns2]
-        # x3_arr = x_arr[ns3]
-        #
-        # y1_arr = y_arr[ns1]
-        # y2_arr = y_arr[ns2]
-        # y3_arr = y_arr[ns3]
+        a_arr_3xN[0] = self.x_arr_3xN[1] * self.y_arr_3xN[2] - self.y_arr_3xN[1] * self.x_arr_3xN[2]
+        a_arr_3xN[1] = self.x_arr_3xN[2] * self.y_arr_3xN[0] - self.y_arr_3xN[2] * self.x_arr_3xN[0]
+        a_arr_3xN[2] = self.x_arr_3xN[0] * self.y_arr_3xN[1] - self.y_arr_3xN[0] * self.x_arr_3xN[1]
         
-        a_arr_3xN[0] = x_arr_3xN[1] * y_arr_3xN[2] - y_arr_3xN[1] * x_arr_3xN[2]
-        a_arr_3xN[1] = x_arr_3xN[2] * y_arr_3xN[0] - y_arr_3xN[2] * x_arr_3xN[0]
-        a_arr_3xN[2] = x_arr_3xN[0] * y_arr_3xN[1] - y_arr_3xN[0] * x_arr_3xN[1]
+        b_arr_3xN[0] = self.y_arr_3xN[1] - self.y_arr_3xN[2]
+        b_arr_3xN[1] = self.y_arr_3xN[2] - self.y_arr_3xN[0]
+        b_arr_3xN[2] = self.y_arr_3xN[0] - self.y_arr_3xN[1]
         
-        b_arr_3xN[0] = y_arr_3xN[1] - y_arr_3xN[2]
-        b_arr_3xN[1] = y_arr_3xN[2] - y_arr_3xN[0]
-        b_arr_3xN[2] = y_arr_3xN[0] - y_arr_3xN[1]
-        
-        c_arr_3xN[0] = x_arr_3xN[2] - x_arr_3xN[1]
-        c_arr_3xN[1] = x_arr_3xN[0] - x_arr_3xN[2]
-        c_arr_3xN[2] = x_arr_3xN[1] - x_arr_3xN[0]
+        c_arr_3xN[0] = self.x_arr_3xN[2] - self.x_arr_3xN[1]
+        c_arr_3xN[1] = self.x_arr_3xN[0] - self.x_arr_3xN[2]
+        c_arr_3xN[2] = self.x_arr_3xN[1] - self.x_arr_3xN[0]
         
         return a_arr_3xN, b_arr_3xN, c_arr_3xN
     
-    def _cal_K_mat(self,
-                   ns_mat: Annotated[NDArray[float], Literal["N", 3]],
-                   K_arr_3x3xN: Annotated[NDArray[float], Literal[3, 3, "N"]]) -> np.ndarray:
-        dimension = np.max(ns_mat.flatten()) + 1
+    def _cal_K_mat(self) -> np.ndarray:
+        dimension = np.max(self.ns_mat.flatten()) + 1
         K_mat = np.zeros((dimension, dimension))
-        for e in range(np.shape(ns_mat)[0]):
+        for e in range(np.shape(self.ns_mat)[0]):
             for i in range(3):
-                row = ns_mat[e, i]
+                row = self.ns_mat[e, i]
                 for j in range(3):
-                    col = ns_mat[e, j]
-                    K_mat[row, col] += K_arr_3x3xN[i, j, e]
+                    col = self.ns_mat[e, j]
+                    K_mat[row, col] += self.K_arr_3x3xN[i, j, e]
         return K_mat
     
-    def _cal_b_mat(self,
-                   ns_mat,
-                   b_mat_arr_3xN):
-        dimension = np.max(ns_mat.flatten()) + 1
+    def _cal_b_mat(self):
+        dimension = np.max(self.ns_mat.flatten()) + 1
         b_mat = np.zeros(dimension)
-        for e in range(np.shape(ns_mat)[0]):
+        for e in range(np.shape(self.ns_mat)[0]):
             for i in range(3):
-                idx = ns_mat[e, i]
-                b_mat[idx] += b_mat_arr_3xN[i, e]
+                idx = self.ns_mat[e, i]
+                b_mat[idx] += self.b_mat_arr_3xN[i, e]
         return b_mat
     
-    def _cal_b_mat_arr_3xN(self, Delta_arr, f):
-        b_mat_arr_3xN = np.zeros((3, len(Delta_arr)))
-        for e in range(len(Delta_arr)):
+    def _cal_b_mat_arr_3xN(self):
+        b_mat_arr_3xN = np.zeros((3, len(self.Delta_arr)))
+        for e in range(len(self.Delta_arr)):
             for i in range(3):
-                b_mat_arr_3xN[i, e] = Delta_arr[e] * f[e] / 3
+                b_mat_arr_3xN[i, e] = self.Delta_arr[e] * self.f[e] / 3
         return b_mat_arr_3xN
     
-    def plot_mesh(self, triangulation: Triangulation = None):
+    def plot_mesh(self, triangulation: Triangulation = None, *, show_tag=False):
         if triangulation is None:
             triangulation = self.triangulation
+        
         fig, ax = plt.subplots()
-        ax.triplot(triangulation, color="k")
+        ax.triplot(triangulation, color="k", lw=.5)
         # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
-        for row_i, row in enumerate(triangulation.triangles):
-            for col in row:
-                ax.text(triangulation.x[col],
-                        triangulation.y[col],
-                        col,
-                        ha="center",
-                        va="center",
-                        backgroundcolor="r",
-                        color="w",
-                        bbox=dict(boxstyle="circle"))
+        if show_tag and np.shape(triangulation.triangles)[0] < 99:  # 如果网格过多, 也会强制不标tag
+            for row_i, row in enumerate(triangulation.triangles):
                 mid_x = np.mean(triangulation.x[row])
                 mid_y = np.mean(triangulation.y[row])
                 ax.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
-                ax.set_xlim((0, 1))
-                ax.set_ylim((0, 1))
-                ax.set_box_aspect(1)
-                ax.set_title("Triangular Mesh")
+                for col in row:
+                    # TODO 优化 text, 单次text
+                    ax.text(triangulation.x[col],
+                            triangulation.y[col],
+                            col,
+                            ha="center",
+                            va="center",
+                            backgroundcolor="r",
+                            color="w",
+                            bbox=dict(boxstyle="circle"))
+                
+        ax.set_xlim((0, 1))
+        ax.set_ylim((0, 1))
+        ax.set_box_aspect(1)
+        ax.set_title("Triangular Mesh")
         return fig, ax
 
-    def plot_K_mat(self):
-        # if triangulation is None:
-        #     triangulation = self.triangulation
-        # ns_mat = triangulation.triangles
-        #
-        # x_arr = triangulation.x
-        # y_arr = triangulation.y
-        #
-        # x_arr_3xN, y_arr_3xN = self._cal_xy_arr_3xN(ns_mat, x_arr, y_arr)
-        #
-        # alpha_x, alpha_y, beta, f = self._cal_param_arr(ns_mat, x_arr_3xN, y_arr_3xN)
-        # a_arr_3xN, b_arr_3xN, c_arr_3xN = self._cal_abc_arr_3xN(ns_mat, x_arr_3xN, y_arr_3xN)
-        # Delta_arr = self._cal_Delta_arr(b_arr_3xN, c_arr_3xN)
-        #
-        # K_arr_3x3xN = self._cal_K_arr_3x3xN(alpha_x, alpha_y, beta, Delta_arr, b_arr_3xN, c_arr_3xN)
-        #
-        # K_mat = self._cal_K_mat(ns_mat, K_arr_3x3xN)
+    def plot_K_mat(self):  # TODO: 增加 **kwarg, 以自定义cmap等
         tmp1 = np.max(self.K_mat.flatten())
         tmp2 = np.min(self.K_mat.flatten())
         tmp = max(tmp1, -tmp2)

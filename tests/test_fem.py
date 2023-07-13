@@ -11,10 +11,11 @@ from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition, FEMSolver2D
 from gallopy import rcParams
 from scipy.integrate import solve_bvp, odeint
 
+
 class MyTestCase(unittest.TestCase):
     def test_fem1D(self):
         node_num = 50
-        force_func = lambda x: x**2+1
+        force_func = lambda x: x ** 2 + 1
         alpha = -1
         # alpha = lambda x: -2*x+1
         beta = 0
@@ -45,20 +46,16 @@ class MyTestCase(unittest.TestCase):
             u0, v0 = y0
             u1, v1 = y1
             
-            return [u0, u1-0]
+            return [u0, u1 - 0]
         
         t = x_array
         
         ystart = odeint(func, [0, 1], t, tfirst=True)
         analysis_result = solve_bvp(func, bc, t, ystart.T)
         
-        
-        
         # analysis_result = x_array / 3 + x_array ** 3 / 6 + x_array ** 2 / 2
         
         ########## 解析解
-        
-        
         
         plt.subplots()
         plt.plot(analysis_result.x, analysis_result.y[0], label="truth")
@@ -71,9 +68,9 @@ class MyTestCase(unittest.TestCase):
     def test_fem2D(self):
         section_num = 8
         node = np.zeros((3, 8))
-        
+    
     def test_mpl_tri(self):
-        pt_num = 20
+        pt_num = 200
         x = np.random.random(pt_num)
         y = np.random.random(pt_num)
         
@@ -94,9 +91,9 @@ class MyTestCase(unittest.TestCase):
         # x = np.array([0, 0, 2, 2])
         # y = np.array([0, 1, 0, 1])
         
-        
-        # x = np.linspace(0, 1, 10)
-        # y = np.linspace(0, 1, 10)
+        num = int(np.floor(np.sqrt(pt_num)))
+        # x = np.linspace(0, 1, num)
+        # y = np.linspace(0, 1, num)
         # x, y = np.meshgrid(x, y)
         # x = x.flatten()
         # y = y.flatten()
@@ -105,22 +102,80 @@ class MyTestCase(unittest.TestCase):
         # print(triangulation.triangles)
         # print(triangulation.x, triangulation.y)
         
-        # force_func = lambda x, y: 1
-        force_func = 1
-        solver = FEMSolver2D(1, 1, 0, force_func, [])
+        # force_func = lambda x, y: x * y
+        f_func = 1
+        # def force_func(x, y):
+        #     return 1
+        print(type(f_func))
+        solver = FEMSolver2D(1, 1, 0, f_func, [])
         Phi = solver.solve(triangulation)
-
-        fig, ax = solver.plot_mesh()
+        
+        fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")
         
         fig, ax = solver.plot_K_mat()
         fig.savefig("./outputs/K_mat.pdf")
         
-        
-        fig, ax = solver.tripcolor(Phi)
+        fig, ax = solver.tripcolor(
+            # show_mesh=False
+        )
         fig.savefig("./outputs/Phi.pdf")
-
+    
+    def test_change_tri(self):
+        pt_num = 20
+        x = np.random.random(pt_num)
+        y = np.random.random(pt_num)
         
+        x = list(x)
+        y = list(y)
+        
+        x.append(0)
+        y.append(0)
+        
+        x.append(0)
+        y.append(1)
+        
+        x.append(1)
+        y.append(0)
+        
+        x.append(1)
+        y.append(1)
+        
+        tri1 = mpl.tri.Triangulation(x, y)
+        solver = FEMSolver2D(1, 1, 0, 1, [])
+        solver.triangulation = tri1
+        fig1, _ = solver.plot_mesh()
+        
+        x = np.random.random(pt_num)
+        y = np.random.random(pt_num)
+        
+        x = list(x)
+        y = list(y)
+        
+        x.append(0)
+        y.append(0)
+        
+        x.append(0)
+        y.append(1)
+        
+        x.append(1)
+        y.append(0)
+        
+        x.append(1)
+        y.append(1)
+        
+        tri2 = mpl.tri.Triangulation(x, y)
+        solver.triangulation = tri2
+        fig2, _ = solver.plot_mesh()
+        
+        fig1.savefig("./outputs/tri1.pdf")
+        fig2.savefig("./outputs/tri2.pdf")
+        
+        # solver.solve()
+        
+        fig3, _ = solver.tripcolor()
+        fig3.savefig("./outputs/test_change_tri_fig3.pdf")
+
 
 if __name__ == '__main__':
     unittest.main()
