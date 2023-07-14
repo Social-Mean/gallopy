@@ -301,14 +301,14 @@ class FEMSolver2D(object):
         for idx in boundary_node_tag:
             self.K_mat[idx] = np.zeros(size)
             self.K_mat[idx, idx] = 1
-            if self.y_arr[idx] == 0 and self.x_arr[idx] not in [0, 1]:
-                self.b_mat[idx] = 0.2
-            elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
-                self.b_mat[idx] = 0.4
-            elif self.x_arr[idx] == 0:
-                self.b_mat[idx] = 0.5
+            if self.y_arr[idx] < 1e-6 or self.x_arr[idx] < 1e-6:
+                self.b_mat[idx] = 0
+            # elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
+            #     self.b_mat[idx] = 0.4
+            # elif self.x_arr[idx] == 0:
+            #     self.b_mat[idx] = 0.5
             else:
-                self.b_mat[idx] = 0.3
+                self.b_mat[idx] = 1
         
         pass
     
@@ -335,20 +335,27 @@ class FEMSolver2D(object):
         fig, ax = plt.subplots()
         vmin = np.min(self.Phi)
         vmax = np.max(self.Phi)
-        im = ax.tripcolor(x_arr, y_arr, self.Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax)
+        im = ax.tripcolor(x_arr, y_arr, self.Phi,
+                          triangles=triangles,
+                          linewidth=0,
+                          rasterized=True,
+                          vmin=vmin, vmax=vmax,
+                          cmap="hot",
+                          # shading='gouraud',
+                          )
         
         # 画网格
         if show_mesh:
             ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
         
         # colorbar
-        cb = plt.colorbar(im, ax=ax)
+        # cb = plt.colorbar(im, ax=ax)
         # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
 
         
-        ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
+        # ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
         ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$")
+        ax.set_ylabel("$y$", rotation=0)
         
         
         
@@ -381,9 +388,10 @@ class FEMSolver2D(object):
         cb = plt.colorbar(im, ax=ax)
         # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
         
-        ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
+        # ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
         ax.set_xlabel("$x$")
         ax.set_ylabel("$y$")
+        ax.azim = 225
         
         ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
         ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
@@ -503,7 +511,7 @@ class FEMSolver2D(object):
         
         ax.set_title("Triangular Mesh")
         ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$")
+        ax.set_ylabel("$y$", rotation=0)
         ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
         ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
         ax.set_box_aspect(1)
@@ -525,6 +533,9 @@ class FEMSolver2D(object):
         ax.set_title(r"$K/\max|K|$ Matrix")
         
         return fig, ax
+    
+    def _find_edge_points(self):
+        ...
         
         
         

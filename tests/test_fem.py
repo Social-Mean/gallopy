@@ -73,7 +73,8 @@ class MyTestCase(unittest.TestCase):
         def create_random_mesh(pt_num):
             x = np.random.random(pt_num)
             y = np.random.random(pt_num)
-    
+            x = []
+            y = []
             x = list(x)
             y = list(y)
     
@@ -107,7 +108,8 @@ class MyTestCase(unittest.TestCase):
             
             x = np.array(x)
             y = np.array(y)
-            return x, y
+            
+            return mpl.tri.Triangulation(x, y)
         
         def create_regular_mesh(pt_num):
             num = int(np.floor(np.sqrt(pt_num)))
@@ -116,15 +118,67 @@ class MyTestCase(unittest.TestCase):
             x, y = np.meshgrid(x, y)
             x = x.flatten()
             y = y.flatten()
-            return x, y
+            return mpl.tri.Triangulation(x, y)
+        
+        def creat_centroid_mesh(pt_num):
+            num = int(np.floor(pt_num**(1/8)))
+            # num = 10
+            x = [0, 0, 1, 1]
+            y = [0, 1, 0, 1]
+            
+            x1 = 0
+            x2 = 1
+            x1s = list(np.ones(num) * x1)[1:-1]
+            x2s = list(np.ones(num) * x2)[1:-1]
+            xs = list(np.linspace(0, 1, num))[1:-1]
+            x_edge = x1s + x2s + xs + xs
+            y_edge = xs + xs + x1s + x2s
+            
+            x += x_edge
+            y += y_edge
+            
+            # x = np.array(x)
+            # y = np.array(y)
+            
+            triangulation = mpl.tri.Triangulation(x, y)
+            ####
+            ns_mat = triangulation.triangles
+            x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
+            y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+            
+            x_back = x
+            y_back = y
+            
+            x = x_new
+            y = y_new
+            
+            triangulation = mpl.tri.Triangulation(x, y)
+            ###
+            while len(triangulation.triangles) < pt_num:
+                ns_mat = triangulation.triangles
+                x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
+                y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+                
+                x += x_new
+                y += y_new
+                
+                triangulation = mpl.tri.Triangulation(x, y)
+            ns_mat = triangulation.triangles
+            x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
+            y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+            
+            x = x_new + x_back
+            y = y_new + y_back
+            triangulation = mpl.tri.Triangulation(x, y)
+            return triangulation
         
         pt_num = 10000
         
-        x, y = create_random_mesh(pt_num)
+        triangulation = creat_centroid_mesh(pt_num)
         
         # x, y = create_regular_mesh(pt_num)
         
-        triangulation = mpl.tri.Triangulation(x, y)
+        # triangulation = mpl.tri.Triangulation(x, y)
         # print(triangulation.get_trifinder()(0, 0))
         # print(triangulation.neighbors)
         # print(triangulation.edges)
@@ -137,21 +191,27 @@ class MyTestCase(unittest.TestCase):
         solver = FEMSolver2D(1, 1, 0, f_func, [])
         Phi = solver(triangulation)
         solver.triangulation = triangulation
-        
+
         fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")
-        
+
         fig, ax = solver.plot_K_mat()
-        fig.savefig("./outputs/K_mat.pdf")
-        
+        # fig.savefig("./outputs/K_mat.pdf")
+
         fig, ax = solver.tripcolor(
             show_mesh=False
         )
-        fig.savefig("./outputs/Phi.pdf")
-        
+        ax.axis(False)
+        # ax.set_title(r"$\nabla^2 𝛷 = 0$")
+        fig.savefig("./outputs/tripcolor.svg")
+        fig.savefig("./outputs/tripcolor.png")
+        fig.savefig("./outputs/tripcolor.pdf")
+        fig.savefig("./outputs/tripcolor.jpg")
+
         fig, ax = solver.trisurface(
             # show_mesh=False
         )
+        ax.set_title(r"$\nabla^2 𝛷 = 0$")
         fig.savefig("./outputs/trisurface.pdf")
     
     def test_change_tri(self):
