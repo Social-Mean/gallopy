@@ -11,6 +11,9 @@ from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition, FEMSolver2D
 from gallopy import rcParams
 from scipy.integrate import solve_bvp, odeint
 
+from gallopy.geometry import area
+from gallopy.mesh import plot_mesh, MeshGenerator
+from matplotlib.tri import UniformTriRefiner, Triangulation, TriAnalyzer
 
 class MyTestCase(unittest.TestCase):
     def test_fem1D(self):
@@ -111,88 +114,29 @@ class MyTestCase(unittest.TestCase):
             
             return mpl.tri.Triangulation(x, y)
         
-        def create_regular_mesh(pt_num):
-            num = int(np.floor(np.sqrt(pt_num)))
-            x = np.linspace(0, 1, num)
-            y = np.linspace(0, 1, num)
-            x, y = np.meshgrid(x, y)
-            x = x.flatten()
-            y = y.flatten()
-            return mpl.tri.Triangulation(x, y)
-        
-        def creat_centroid_mesh(pt_num):
-            num = int(np.floor(pt_num**(1/2)))
-            # num = 10
-            x = [0, 0, 1, 1]
-            y = [0, 1, 0, 1]
-            
-            x1 = 0
-            x2 = 1
-            x1s = list(np.ones(num) * x1)[1:-1]
-            x2s = list(np.ones(num) * x2)[1:-1]
-            xs = list(np.linspace(0, 1, num))[1:-1]
-            x_edge = x1s + x2s + xs + xs
-            y_edge = xs + xs + x1s + x2s
-            
-            x += x_edge
-            y += y_edge
-            
-            # x = np.array(x)
-            # y = np.array(y)
-            
-            triangulation = mpl.tri.Triangulation(x, y)
-            ####
-            # ns_mat = triangulation.triangles
-            # x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
-            # y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
-            #
-            # x_back = x
-            # y_back = y
-            #
-            # x = x_new
-            # y = y_new
-            #
-            # triangulation = mpl.tri.Triangulation(x, y)
-            ###
-            area = 1
-            dif_min = 1 / pt_num / 2  # / np.pi
-            
-            # while len(triangulation.triangles) < pt_num:
-            while True:
-                ns_mat = triangulation.triangles
-                x_new = np.mean(triangulation.x[ns_mat], axis=1)
-                y_new = np.mean(triangulation.y[ns_mat], axis=1)
-                
-                
-                dif = (x_new - triangulation.x[ns_mat][:, 0])**2 + (y_new - triangulation.y[ns_mat][:, 0])**2
-                
-                x_new = x_new[dif > dif_min]
-                y_new = y_new[dif > dif_min]
-                
-                x_new = list(x_new)
-                y_new = list(y_new)
-                
-                if len(x_new) == 0:
-                    break
-                
-                x += x_new
-                y += y_new
-                
-                triangulation = mpl.tri.Triangulation(x, y)
-            ###
-            # ns_mat = triangulation.triangles
-            # x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
-            # y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
-            #
-            # x = x_new + x_back
-            # y = y_new + y_back
-            # triangulation = mpl.tri.Triangulation(x, y)
-            ###
-            return triangulation
-        
-        pt_num = 10000
-        
-        triangulation = creat_centroid_mesh(pt_num)
+        num_tri = 100
+        num = 10
+        x = [0, 0, 1, 1]
+        y = [0, 1, 0, 1]
+        x1 = 0
+        x2 = 1
+        x1s = list(np.ones(num) * x1)[1:-1]
+        x2s = list(np.ones(num) * x2)[1:-1]
+        xs = list(np.linspace(0, 1, num))[1:-1]
+        x_edge = x1s + x2s + xs + xs
+        y_edge = xs + xs + x1s + x2s
+        x += x_edge
+        y += y_edge
+        mg = MeshGenerator(x, y)
+        # triangulation = mg.regular_mesh()
+        # 用重心法迭代创造网格
+        triangulation = mg.centroid_mesh(num_tri)
+        # 精细化网格
+        triangulation = mg.uniform_mesh(triangulation)
+        # 寻找当前节点下最优网格
+        triangulation = Triangulation(triangulation.x, triangulation.y)
+        # 圆比总和
+        print(TriAnalyzer(triangulation).circle_ratios().sum())
         
         # triangulation = create_regular_mesh(pt_num)
         
@@ -208,7 +152,7 @@ class MyTestCase(unittest.TestCase):
         
         solver = FEMSolver2D(1, 1, 0, f_func, [])
         Phi = solver(triangulation)
-        solver.triangulation = triangulation
+        # solver.triangulation, _ = UniformTriRefiner(triangulation).refine_triangulation()
 
         fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")

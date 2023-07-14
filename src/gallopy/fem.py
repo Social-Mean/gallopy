@@ -11,6 +11,7 @@ from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
 from matplotlib.tri import Triangulation
 from .matrix import kronecker_delta
 import cmcrameri.cm as cmc
+from . import mesh
 
 class FEMSolver1D(object):
     def __init__(self,
@@ -158,7 +159,7 @@ class FEMSolver2D(object):
         # 中间变量
         self._triangulation = triangulation
         self.ns_mat = None
-        self.N = None
+        self.N: Optional[int] = None
         self.x_arr = None
         self.y_arr = None
         self.x_arr_3xN = None
@@ -172,7 +173,7 @@ class FEMSolver2D(object):
         self.c_arr_3xN = None
         self.Delta_arr = None
         self.K_arr_3x3xN = None
-        self.K_mat: Optional[np.ndarray] = None
+        self.K_mat: Optional[lil_array] = None
         self.b_mat_arr_3xN = None
         self.b_mat = None
         self.N_arr_3xN = None
@@ -299,16 +300,26 @@ class FEMSolver2D(object):
                             boundary_node_tag.append(idx)
         
         for idx in boundary_node_tag:
-            self.K_mat[idx] = np.zeros(size)
-            self.K_mat[idx, idx] = 1
-            if self.y_arr[idx] < 1e-6 or self.x_arr[idx] < 1e-6:
+            
+            if self.y_arr[idx] < 1e-6:
+                self.K_mat[idx] = np.zeros(size)
+                self.K_mat[idx, idx] = 1
+                self.b_mat[idx] = 1
+            elif 1 - self.y_arr[idx] < 1e-6:
+                self.K_mat[idx] = np.zeros(size)
+                self.K_mat[idx, idx] = 1
                 self.b_mat[idx] = 0
+                # self.b_mat[idx] = 0
             # elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
             #     self.b_mat[idx] = 0.4
             # elif self.x_arr[idx] == 0:
             #     self.b_mat[idx] = 0.5
             else:
-                self.b_mat[idx] = 1
+                self.K_mat[idx] = np.zeros(size)
+                self.K_mat[idx, idx] = 1
+                self.b_mat[idx] = 0
+                pass
+                
         
         pass
     
@@ -417,7 +428,7 @@ class FEMSolver2D(object):
         Delta_arr = (self.b_arr_3xN[0] * self.c_arr_3xN[1] - self.b_arr_3xN[1] * self.c_arr_3xN[0]) / 2
         return Delta_arr
     
-    def _cal_N_arr_3xN(self) -> ArrayLike:
+    def _cal_N_arr_3xN(self) -> Sequence:
         # N_arr = kronecker_delta()
         N_arr_3xN = [[None for col in range(self.N)] for row in range(3)]
         for j in range(3):
@@ -490,32 +501,32 @@ class FEMSolver2D(object):
         if triangulation is None:
             triangulation = self.triangulation
         
-        fig, ax = plt.subplots()
-        ax.triplot(triangulation, color="k", lw=.5)
-        # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
-        if show_tag and np.shape(triangulation.triangles)[0] < 99:  # 如果网格过多, 也会强制不标tag
-            for row_i, row in enumerate(triangulation.triangles):
-                mid_x = np.mean(triangulation.x[row])
-                mid_y = np.mean(triangulation.y[row])
-                ax.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
-                for col in row:
-                    # TODO 优化 text, 单次text
-                    ax.text(triangulation.x[col],
-                            triangulation.y[col],
-                            col,
-                            ha="center",
-                            va="center",
-                            backgroundcolor="r",
-                            color="w",
-                            bbox=dict(boxstyle="circle"))
-        
-        ax.set_title("Triangular Mesh")
-        ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$", rotation=0)
-        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
-        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
-        ax.set_box_aspect(1)
-        return fig, ax
+        # fig, ax = plt.subplots()
+        # ax.triplot(triangulation, color="k", lw=.5)
+        # # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
+        # if show_tag and np.shape(triangulation.triangles)[0] < 99:  # 如果网格过多, 也会强制不标tag
+        #     for row_i, row in enumerate(triangulation.triangles):
+        #         mid_x = np.mean(triangulation.x[row])
+        #         mid_y = np.mean(triangulation.y[row])
+        #         ax.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
+        #         for col in row:
+        #             # TODO 优化 text, 单次text
+        #             ax.text(triangulation.x[col],
+        #                     triangulation.y[col],
+        #                     col,
+        #                     ha="center",
+        #                     va="center",
+        #                     backgroundcolor="r",
+        #                     color="w",
+        #                     bbox=dict(boxstyle="circle"))
+        #
+        # ax.set_title("Triangular Mesh")
+        # ax.set_xlabel("$x$")
+        # ax.set_ylabel("$y$", rotation=0)
+        # ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
+        # ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
+        # ax.set_box_aspect(1)
+        return mesh.plot_mesh(self.triangulation, show_tag=show_tag)
 
     def plot_K_mat(self):  # TODO: 增加 **kwarg, 以自定义cmap等
         # tmp1 =
