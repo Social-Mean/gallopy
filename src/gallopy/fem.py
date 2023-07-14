@@ -349,7 +349,7 @@ class FEMSolver2D(object):
             ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
         
         # colorbar
-        # cb = plt.colorbar(im, ax=ax)
+        cb = plt.colorbar(im, ax=ax)
         # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
 
         

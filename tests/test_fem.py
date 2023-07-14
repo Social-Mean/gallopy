@@ -121,7 +121,7 @@ class MyTestCase(unittest.TestCase):
             return mpl.tri.Triangulation(x, y)
         
         def creat_centroid_mesh(pt_num):
-            num = int(np.floor(pt_num**(1/8)))
+            num = int(np.floor(pt_num**(1/2)))
             # num = 10
             x = [0, 0, 1, 1]
             y = [0, 1, 0, 1]
@@ -142,41 +142,59 @@ class MyTestCase(unittest.TestCase):
             
             triangulation = mpl.tri.Triangulation(x, y)
             ####
-            ns_mat = triangulation.triangles
-            x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
-            y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
-            
-            x_back = x
-            y_back = y
-            
-            x = x_new
-            y = y_new
-            
-            triangulation = mpl.tri.Triangulation(x, y)
+            # ns_mat = triangulation.triangles
+            # x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
+            # y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+            #
+            # x_back = x
+            # y_back = y
+            #
+            # x = x_new
+            # y = y_new
+            #
+            # triangulation = mpl.tri.Triangulation(x, y)
             ###
-            while len(triangulation.triangles) < pt_num:
+            area = 1
+            dif_min = 1 / pt_num / 2  # / np.pi
+            
+            # while len(triangulation.triangles) < pt_num:
+            while True:
                 ns_mat = triangulation.triangles
-                x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
-                y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+                x_new = np.mean(triangulation.x[ns_mat], axis=1)
+                y_new = np.mean(triangulation.y[ns_mat], axis=1)
+                
+                
+                dif = (x_new - triangulation.x[ns_mat][:, 0])**2 + (y_new - triangulation.y[ns_mat][:, 0])**2
+                
+                x_new = x_new[dif > dif_min]
+                y_new = y_new[dif > dif_min]
+                
+                x_new = list(x_new)
+                y_new = list(y_new)
+                
+                if len(x_new) == 0:
+                    break
                 
                 x += x_new
                 y += y_new
                 
                 triangulation = mpl.tri.Triangulation(x, y)
-            ns_mat = triangulation.triangles
-            x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
-            y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
-            
-            x = x_new + x_back
-            y = y_new + y_back
-            triangulation = mpl.tri.Triangulation(x, y)
+            ###
+            # ns_mat = triangulation.triangles
+            # x_new = list(np.mean(triangulation.x[ns_mat], axis=1))
+            # y_new = list(np.mean(triangulation.y[ns_mat], axis=1))
+            #
+            # x = x_new + x_back
+            # y = y_new + y_back
+            # triangulation = mpl.tri.Triangulation(x, y)
+            ###
             return triangulation
         
         pt_num = 10000
         
         triangulation = creat_centroid_mesh(pt_num)
         
-        # x, y = create_regular_mesh(pt_num)
+        # triangulation = create_regular_mesh(pt_num)
         
         # triangulation = mpl.tri.Triangulation(x, y)
         # print(triangulation.get_trifinder()(0, 0))
@@ -201,12 +219,12 @@ class MyTestCase(unittest.TestCase):
         fig, ax = solver.tripcolor(
             show_mesh=False
         )
-        ax.axis(False)
-        # ax.set_title(r"$\nabla^2 𝛷 = 0$")
-        fig.savefig("./outputs/tripcolor.svg")
-        fig.savefig("./outputs/tripcolor.png")
+        # ax.axis(False)
+        ax.set_title(r"$\nabla^2 𝛷 = 0$")
+        # fig.savefig("./outputs/tripcolor.svg")
+        # fig.savefig("./outputs/tripcolor.png")
         fig.savefig("./outputs/tripcolor.pdf")
-        fig.savefig("./outputs/tripcolor.jpg")
+        # fig.savefig("./outputs/tripcolor.jpg")
 
         fig, ax = solver.trisurface(
             # show_mesh=False
