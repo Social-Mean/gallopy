@@ -7,8 +7,6 @@ Social-Mean/gallopy
 ![GitHub Repo stars](https://img.shields.io/github/stars/Social-Mean/gallopy)
 ![GitHub watchers](https://img.shields.io/github/watchers/Social-Mean/gallopy)
 
-![PyPI](https://img.shields.io/pypi/v/gallopy)
-
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/Social-Mean/gallopy)
 ![GitHub repo file count (file type)](https://img.shields.io/github/directory-file-count/Social-Mean/gallopy)
 ![GitHub repo size](https://img.shields.io/github/repo-size/Social-Mean/gallopy)

@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from . import rcParams
 
 
 def area(p1, p2, p3):
@@ -13,8 +11,6 @@ def area(p1, p2, p3):
     l3 = np.linalg.norm(p1 - p2)
     
     s = (l1 + l2 + l3) / 2
-    a = np.sqrt(s * (s-l1) * (s-l2) * (s-l3))
+    a = np.sqrt(s * (s - l1) * (s - l2) * (s - l3))
     
     return a
-    
-    

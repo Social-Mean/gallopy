@@ -10,7 +10,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks  # 寻峰函数
-from . import rcParams
 
 c0 = 299_792_458
 

@@ -1,16 +1,16 @@
-from typing import Sequence, Union
 from collections.abc import Iterable
-import matplotlib as mpl
-import numpy as np
-from numpy.typing import ArrayLike
-from numpy.fft import fftshift, fftn
+from typing import Sequence, Union
+
 import matplotlib.pyplot as plt
-from scipy.linalg import eigh
-from . import rcParams
-from .matrix import convmat
-from matplotlib import patches, collections
-from . import physical_constant as const
+import numpy as np
+from matplotlib import patches
 from matplotlib.colors import ListedColormap
+from numpy.typing import ArrayLike
+from scipy.linalg import eigh
+
+from . import physical_constant as const
+from .matrix import convmat
+
 
 class KeyPoint(object):
     def __init__(self, name: str, position: ArrayLike):
@@ -358,7 +358,6 @@ class PWEMSolver(object):
         x_array = np.linspace(-half_lattice_constant, half_lattice_constant, Nx)
         y_array = np.linspace(-half_lattice_constant, half_lattice_constant, Ny)
         
-        
         fig, ax = plt.subplots()
         
         # im = ax.pcolormesh(x_array, y_array, self.epsilon_r, cmap="Greys")
@@ -384,7 +383,7 @@ class PWEMSolver(object):
         # cb.set_ticks(list(cb.get_ticks()) + [np.min(self.epsilon_r), np.max(self.epsilon_r)])
         
         ticks = np.sort(np.array(cb.get_ticks()))
-        color_num = len(ticks)-1
+        color_num = len(ticks) - 1
         # ticks_normalized = ticks - min(ticks)
         # ticks_normalized = ticks_normalized / max(ticks_normalized)
         # color_arr = []
@@ -399,12 +398,12 @@ class PWEMSolver(object):
         im.set_clim((min(ticks), max(ticks)))
         
         return fig, ax
-
+    
     def draw_first_brillouin_zone(self, key_points):
         half_len = np.pi / self.lattice_constant
         rect_1BZ = patches.Rectangle((-half_len, -half_len),
-                                     2*half_len,
-                                     2*half_len,
+                                     2 * half_len,
+                                     2 * half_len,
                                      color="None")
         
         fig, ax = plt.subplots()
@@ -413,7 +412,7 @@ class PWEMSolver(object):
         
         pos_list = [_.position for _ in key_points]
         name_list = [_.name for _ in key_points]
-
+        
         # polygon
         xy_arr = np.zeros((len(key_points), 2))
         for i in range(len(key_points)):
@@ -430,13 +429,11 @@ class PWEMSolver(object):
         # arrow
         for i in range(len(key_points)):
             x, y = key_points[i].position
-            j = i+1 if i+1 < len(key_points) else 0
+            j = i + 1 if i + 1 < len(key_points) else 0
             dx, dy = key_points[j].position - key_points[i].position
             arrow = patches.Arrow(x, y, dx, dy, 0.1)
             # ax.add_patch(arrow)
             ax.arrow(x, y, dx, dy, width=.03, length_includes_head=True, facecolor="k", clip_on=False)
-            
-
         
         ax.set_xticks([-half_len, 0, half_len], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
         ax.set_yticks([-half_len, 0, half_len], [r"$-\dfrac{\pi}{a}$", "0", r"$\dfrac{\pi}{a}$"])
@@ -449,6 +446,3 @@ class PWEMSolver(object):
         ax.set_ylabel(r"$\beta_y$", rotation=0)
         
         return fig, ax
-    
-    
-    

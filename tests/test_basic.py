@@ -1,10 +1,9 @@
 import unittest
-import sys
-import numpy as np
+
 # sys.path.append("../src")
-import matplotlib.pyplot as plt
-from gallopy.tmm_mode import TMMSolver
+
 c0 = 299_792_458
+
 
 class MyTestCase(unittest.TestCase):
     def test_something(self):

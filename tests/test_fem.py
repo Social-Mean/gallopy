@@ -1,19 +1,16 @@
-import random
 import unittest
 import sys
 
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
 
 sys.path.append("../scr")
 from gallopy.fem import FEMSolver1D, DirichletBoundaryCondition, FEMSolver2D, tripcolor, trisurface
-from gallopy import rcParams
 from scipy.integrate import solve_bvp, odeint
 
-from gallopy.geometry import area
-from gallopy.mesh import plot_mesh, MeshGenerator
-from matplotlib.tri import UniformTriRefiner, Triangulation, TriAnalyzer
+from gallopy.mesh import MeshGenerator
+from matplotlib.tri import UniformTriRefiner, Triangulation
 
 
 def _triangulation():
@@ -45,7 +42,7 @@ def _triangulation():
 class MyTestCase(unittest.TestCase):
     def test_fem1D(self):
         node_num = 50
-        force_func = lambda x: x**3 + 1
+        force_func = lambda x: x ** 3 + 1
         # force_func = 0
         alpha = -1
         # alpha = lambda x: -2*x+1
@@ -70,7 +67,7 @@ class MyTestCase(unittest.TestCase):
         ########## 解析解
         def func(t, y):
             u, v = y
-            dydt = [v, force_func(t)-u]
+            dydt = [v, force_func(t) - u]
             return dydt
         
         def bc(y0, y1):
@@ -110,26 +107,24 @@ class MyTestCase(unittest.TestCase):
             y = []
             x = list(x)
             y = list(y)
-    
+            
             x.append(0)
             y.append(0)
-    
+            
             x.append(0)
-            y.append(1)
-    
-            x.append(1)
-            y.append(0)
-    
-            x.append(1)
             y.append(1)
             
-
+            x.append(1)
+            y.append(0)
+            
+            x.append(1)
+            y.append(1)
             
             x1 = 0
             x2 = 1
             num = int(np.floor(np.sqrt(pt_num)))
-            x1s = list(np.ones(num)*x1)[1:-1]
-            x2s = list(np.ones(num)*x2)[1:-1]
+            x1s = list(np.ones(num) * x1)[1:-1]
+            x2s = list(np.ones(num) * x2)[1:-1]
             xs = list(np.linspace(0, 1, num))[1:-1]
             x_edge = x1s + x2s + xs + xs
             y_edge = xs + xs + x1s + x2s
@@ -143,6 +138,7 @@ class MyTestCase(unittest.TestCase):
             y = np.array(y)
             
             return mpl.tri.Triangulation(x, y)
+        
         triangulation = _triangulation()
         # 圆比总和
         # print(TriAnalyzer(triangulation).circle_ratios().sum())
@@ -154,22 +150,21 @@ class MyTestCase(unittest.TestCase):
         # print(triangulation.neighbors)
         # print(triangulation.edges)
         # alpha_x = lambda x, y: 1
-        f_func = lambda x, y: 2*np.pi**2 * np.sin(np.pi*x) * np.sin(np.pi*y)
+        f_func = lambda x, y: 2 * np.pi ** 2 * np.sin(np.pi * x) * np.sin(np.pi * y)
         # f_func = lambda x, y: 1
         f_func = 0
-
         
         solver = FEMSolver2D(1, 1, 0, f_func, [])
         Phi = solver(triangulation)
         # solver.triangulation, _ = UniformTriRefiner(triangulation).refine_triangulation()
-
+        
         fig, ax = solver.plot_mesh(show_tag=True)
         fig.savefig("./outputs/tri_mesh.pdf")
         fig.savefig("./outputs/tri_mesh.svg")
-
+        
         fig, ax = solver.plot_K_mat()
         # fig.savefig("./outputs/K_mat.pdf")
-
+        
         fig, ax = tripcolor(
             solver,
             show_mesh=False
@@ -180,7 +175,7 @@ class MyTestCase(unittest.TestCase):
         # fig.savefig("./outputs/tripcolor.png")
         fig.savefig("./outputs/tripcolor.pdf")
         # fig.savefig("./outputs/tripcolor.jpg")
-
+        
         fig, ax = trisurface(
             solver,
             # show_mesh=False
@@ -240,10 +235,9 @@ class MyTestCase(unittest.TestCase):
         
         # solver.solve()
         
-        fig3, _ = solver.tripcolor()
+        fig3, _ = tripcolor(solver)
         fig3.savefig("./outputs/test_change_tri_fig3.pdf")
-
-
+    
     def test_thermal_conduction_2D(self):
         filename = "thermal_conduction"
         triangulation = _triangulation()
@@ -257,15 +251,15 @@ class MyTestCase(unittest.TestCase):
         ax.set_title(r"2D Thermal Conduction $\nabla^2 𝛷 = 0$")
         fig.savefig(f"./outputs/{filename}_mesh.svg")
         
-        fig, ax = fem.tripcolor(show_mesh=False)
+        fig, ax = tripcolor(fem, show_mesh=False)
         ax.set_title(r"2D Thermal Conduction $\nabla^2 𝛷 = 0$")
         fig.savefig(f"./outputs/{filename}_tripcolor.svg")
         
-        fig, ax = fem.tripcolor()
+        fig, ax = tripcolor(fem)
         ax.set_title(r"2D Thermal Conduction $\nabla^2 𝛷 = 0$")
         fig.savefig(f"./outputs/{filename}_tripcolor_with_mesh.svg")
         
-        fig, ax = fem.trisurface()
+        fig, ax = trisurface(fem)
         ax.set_title(r"2D Thermal Conduction $\nabla^2 𝛷 = 0$")
         fig.savefig(f"./outputs/{filename}_trisurface.svg")
     
@@ -282,7 +276,7 @@ class MyTestCase(unittest.TestCase):
             pos_y = 0.5
             radius = 0.1
             rho = 1
-            if (x-pos_x)**2 + (y-pos_y)**2 < radius**2:
+            if (x - pos_x) ** 2 + (y - pos_y) ** 2 < radius ** 2:
                 return -rho
             return 0
         
@@ -292,51 +286,17 @@ class MyTestCase(unittest.TestCase):
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_mesh.svg")
         
-        fig, ax = fem.tripcolor(show_mesh=False)
+        fig, ax = tripcolor(fem, show_mesh=False)
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_tripcolor.svg")
         
-        fig, ax = fem.tripcolor()
+        fig, ax = tripcolor(fem)
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_tripcolor_with_mesh.svg")
         
-        fig, ax = fem.trisurface()
+        fig, ax = trisurface(fem)
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_trisurface.svg")
-    
-    def test_wave_equation_with_time_1D(self):
-        filename = "wave_equation"
-        fmt = "pdf"
-        title = r"Wave Equation $u_{tt}=v^2u_{xx}$"
-        triangulation = _triangulation()
-        v = 1
-        alpha_x = v**2
-        alpha_y = -1
-        beta = 0
-        
-        f = 0
-        
-        fem = FEMSolver2D(alpha_x, alpha_y, beta, f, [])
-        fem.triangulation = triangulation
-        fig, ax = fem.plot_mesh()
-        ax.set_ylabel("$t$")
-        ax.set_title(title)
-        fig.savefig(f"./outputs/{filename}_mesh.{fmt}")
-        
-        fig, ax = fem.tripcolor(show_mesh=False)
-        ax.set_ylabel("$t$")
-        ax.set_title(title)
-        fig.savefig(f"./outputs/{filename}_tripcolor.{fmt}")
-        
-        fig, ax = fem.tripcolor()
-        ax.set_ylabel("$t$")
-        ax.set_title(title)
-        fig.savefig(f"./outputs/{filename}_tripcolor_with_mesh.{fmt}")
-        
-        fig, ax = fem.trisurface()
-        ax.set_ylabel("$t$")
-        ax.set_title(title)
-        fig.savefig(f"./outputs/{filename}_trisurface.{fmt}")
     
     def test_wave_equation_with_time_1D(self):
         filename = "wave_equation"
@@ -357,20 +317,21 @@ class MyTestCase(unittest.TestCase):
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_mesh.{fmt}")
         
-        fig, ax = fem.tripcolor(show_mesh=False)
+        fig, ax = tripcolor(fem, show_mesh=False)
         ax.set_ylabel("$t$")
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_tripcolor.{fmt}")
         
-        fig, ax = fem.tripcolor()
+        fig, ax = tripcolor(fem)
         ax.set_ylabel("$t$")
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_tripcolor_with_mesh.{fmt}")
         
-        fig, ax = fem.trisurface()
+        fig, ax = trisurface(fem)
         ax.set_ylabel("$t$")
         ax.set_title(title)
         fig.savefig(f"./outputs/{filename}_trisurface.{fmt}")
+
 
 if __name__ == '__main__':
     unittest.main()

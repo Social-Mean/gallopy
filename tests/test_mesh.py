@@ -1,6 +1,10 @@
 import unittest
-from gallopy.mesh import MeshGenerator, plot_mesh
+
 import numpy as np
+
+from gallopy.mesh import MeshGenerator, plot_mesh
+
+
 # from gallopy.fem import
 
 class MyTestCase(unittest.TestCase):
@@ -22,7 +26,7 @@ class MyTestCase(unittest.TestCase):
         tri_mesh = MeshGenerator(x, y).regular_mesh()
         fig, ax = plot_mesh(tri_mesh)
         fig.savefig("./outputs/regular_mesh.pdf")
-        
+    
     def test_centroid_mesh(self):
         num_tri = 1000
         num = 10

@@ -1,7 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from . import rcParams
+import numpy as np
 from matplotlib.tri import Triangulation, UniformTriRefiner
+
 
 class MeshGenerator(object):
     def __init__(self, edge_x_arr, edge_y_arr):
@@ -48,7 +48,6 @@ class MeshGenerator(object):
             
             x += list(x_new)
             y += list(y_new)
-        
             
             triangulation = Triangulation(x, y)
         return triangulation
@@ -57,8 +56,9 @@ class MeshGenerator(object):
         if triangulation is None:
             return UniformTriRefiner(Triangulation(self.edge_x_arr, self.edge_y_arr)).refine_triangulation()
         return UniformTriRefiner(triangulation).refine_triangulation()
+
+
 def plot_mesh(triangulation: Triangulation, *, show_tag=False):
-    
     fig, ax = plt.subplots()
     ax.triplot(triangulation, color="k", lw=.5)
     # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")

@@ -1,6 +1,9 @@
 import unittest
-from gallopy.matrix import kronecker_delta
+
 import numpy as np
+
+from gallopy.matrix import kronecker_delta
+
 
 class MyTestCase(unittest.TestCase):
     def test_kronecker_delta(self):

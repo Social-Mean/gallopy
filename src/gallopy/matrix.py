@@ -1,9 +1,10 @@
+from numbers import Number
+from typing import Union
+
 import numpy as np
 from numpy.fft import fftshift, fftn
-import matplotlib.pyplot as plt
 from numpy.typing import ArrayLike
-from typing import Union, Callable, Sequence
-from numbers import Number
+
 
 def convmat(A, P, Q):
     # Extract spatial harmonics (P, Q, R) of a general 3D unit cell
@@ -45,12 +46,14 @@ def convmat(A, P, Q):
                     C[row - 1, col - 1] = A[p_0 + p_fft, q_0 + q_fft]
     return C
 
+
 def complexIdentity(matrixSize):
     """ Wrapper for numpy identity declaration that forces arrays to be complex doubles """
     if matrixSize == 1:
         return 1
     else:
         return np.identity(matrixSize, dtype=np.cdouble);
+
 
 def redheffer_product(SA: ArrayLike, SB: ArrayLike):
     D = SA[0, 1] @ np.linalg.inv(complexIdentity(SA[0, 0].shape[0]) - SB[0, 0] @ SA[1, 1])
@@ -63,6 +66,7 @@ def redheffer_product(SA: ArrayLike, SB: ArrayLike):
     
     S = np.array([[S11, S12], [S21, S22]])
     return S
+
 
 def kronecker_delta(i: Union[Number, ArrayLike], j: Union[Number, ArrayLike]) -> Union[Number, ArrayLike]:
     if isinstance(i, Number) and isinstance(j, Number):

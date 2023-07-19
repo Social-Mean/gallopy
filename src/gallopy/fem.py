@@ -1,17 +1,17 @@
+from typing import Union, Callable, Sequence, Optional
+
 import numpy as np
 from matplotlib import pyplot as plt
-from typing import Union, Callable, Sequence, Annotated, Literal, Optional
-from numbers import Number
-from numpy.typing import ArrayLike, NDArray
-from numpy.linalg import inv, pinv
-from scipy.sparse import dia_matrix, coo_matrix, lil_array
-from scipy.sparse.linalg import lsqr, spsolve
-from scipy.linalg import solve_banded, solveh_banded
-from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
 from matplotlib.tri import Triangulation
-from .matrix import kronecker_delta
-import cmcrameri.cm as cmc
+from numpy.linalg import pinv
+from numpy.typing import ArrayLike
+from scipy.sparse import lil_array
+from scipy.sparse.linalg import spsolve
+
 from . import mesh
+from .boundary_condition import BoundaryCondition, DirichletBoundaryCondition
+from .matrix import kronecker_delta
+
 
 class FEMSolver1D(object):
     def __init__(self,
@@ -140,8 +140,6 @@ class FEMSolver2D(object):
         self.beta_func = beta_func
         self.f_func = f_func
         
-        
-        
         self.boundary_conditions = boundary_conditions
         
         self.dirichlet_boundary_condition_list = []
@@ -154,8 +152,7 @@ class FEMSolver2D(object):
                 self.dirichlet_boundary_condition_list.append(condition)
             else:
                 pass
-            
-            
+        
         # 中间变量
         self._triangulation = triangulation
         self.ns_mat = None
@@ -181,11 +178,11 @@ class FEMSolver2D(object):
     
     def __call__(self, triangulation: Triangulation):
         return self.solve(triangulation)
-        
-        
+    
     @property
     def triangulation(self):
         return self._triangulation
+    
     @triangulation.setter
     def triangulation(self, input_tri: Triangulation):
         self._triangulation = input_tri
@@ -203,7 +200,6 @@ class FEMSolver2D(object):
         self.b_mat_arr_3xN = self._cal_b_mat_arr_3xN()
         self.b_mat = self._cal_b_mat()
         self._impose_boundary_conditions()
-
     
     def _cal_param_arr(self) -> tuple[ArrayLike, ArrayLike, ArrayLike, ArrayLike]:
         
@@ -312,7 +308,6 @@ class FEMSolver2D(object):
             #     self.K_mat[idx, idx] = 1
             #     self.b_mat[idx] = 0
             #     pass
-                
         
         pass
     
@@ -326,12 +321,6 @@ class FEMSolver2D(object):
         self.Phi = spsolve(K_csr, self.b_mat)
         
         return self.Phi
-
-
-        
-
-    
-
     
     def _cal_xy_arr_3xN(self):
         x_arr_3xN = np.zeros(np.shape(self.ns_mat.transpose()))
@@ -346,6 +335,7 @@ class FEMSolver2D(object):
         y_arr_3xN[2] = self.y_arr[self.ns_mat[:, 2]]
         
         return x_arr_3xN, y_arr_3xN
+    
     def _cal_Delta_arr(self) -> ArrayLike:
         Delta_arr = (self.b_arr_3xN[0] * self.c_arr_3xN[1] - self.b_arr_3xN[1] * self.c_arr_3xN[0]) / 2
         return Delta_arr
@@ -355,7 +345,8 @@ class FEMSolver2D(object):
         N_arr_3xN = [[None for col in range(self.N)] for row in range(3)]
         for j in range(3):
             for e in range(self.N):
-                N_arr_3xN[j][e] = lambda x, y: (self.a_arr_3xN[j, e] + self.b_arr_3xN[j, e]*x + self.c_arr_3xN[j, e]*y) / (2*self.Delta_arr[e])
+                N_arr_3xN[j][e] = lambda x, y: (self.a_arr_3xN[j, e] + self.b_arr_3xN[j, e] * x + self.c_arr_3xN[
+                    j, e] * y) / (2 * self.Delta_arr[e])
         
         return N_arr_3xN
     
@@ -365,12 +356,12 @@ class FEMSolver2D(object):
         
         for i in range(3):
             
-            
             for j in range(3):
-                tmp1 = self.alpha_x * self.b_arr_3xN[i] * self.b_arr_3xN[j] + self.alpha_y * self.c_arr_3xN[i] * self.c_arr_3xN[j]
+                tmp1 = self.alpha_x * self.b_arr_3xN[i] * self.b_arr_3xN[j] + self.alpha_y * self.c_arr_3xN[i] * \
+                       self.c_arr_3xN[j]
                 tmp2 = self.beta * (1 + kronecker_delta(i, j))
                 K_arr_3x3xN[i, j] = tmp1 / (4 * self.Delta_arr) + self.Delta_arr / 12 * tmp2
-                
+        
         return K_arr_3x3xN
     
     def _cal_abc_arr_3xN(self):
@@ -425,12 +416,12 @@ class FEMSolver2D(object):
         if triangulation is None:
             triangulation = self.triangulation
         return mesh.plot_mesh(self.triangulation, show_tag=show_tag)
-
+    
     def plot_K_mat(self):
         K_mat_arr = self.K_mat.toarray()
         max_abs_K = np.max(np.abs(K_mat_arr.flatten()))
         fig, ax = plt.subplots()
-        im = ax.matshow(K_mat_arr/max_abs_K, cmap="seismic", vmin=-1, vmax=1)
+        im = ax.matshow(K_mat_arr / max_abs_K, cmap="seismic", vmin=-1, vmax=1)
         cb = fig.colorbar(im, ax=ax)
         ax.tick_params(axis="both", direction="out")
         ax.set_title(r"$K/\max|K|$ Matrix")
@@ -439,7 +430,8 @@ class FEMSolver2D(object):
     
     def _find_edge_points(self):
         ...
-    
+
+
 def tripcolor(fem_solver_2d: FEMSolver2D, *, show_mesh=True):
     if fem_solver_2d.Phi is None:
         fem_solver_2d.Phi = fem_solver_2d.solve()
@@ -477,7 +469,8 @@ def tripcolor(fem_solver_2d: FEMSolver2D, *, show_mesh=True):
     # ax.set_xticks([])
     # ax.set_yticks([])
     return fig, ax
-    
+
+
 def trisurface(fem_solver_2d: FEMSolver2D, *, show_mesh=False):
     if fem_solver_2d.Phi is None:
         fem_solver_2d.Phi = fem_solver_2d.solve()
@@ -496,7 +489,7 @@ def trisurface(fem_solver_2d: FEMSolver2D, *, show_mesh=False):
     else:
         im = ax.plot_trisurf(x_arr, y_arr, fem_solver_2d.Phi, triangles=triangles,
                              linewidth=0, rasterized=False, vmin=vmin, vmax=vmax, cmap="hot", edgecolors="None")
-
+    
     # colorbar
     cb = plt.colorbar(im, ax=ax)
     # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
