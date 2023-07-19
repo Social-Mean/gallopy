@@ -300,25 +300,27 @@ class FEMSolver2D(object):
                             boundary_node_tag.append(idx)
         
         for idx in boundary_node_tag:
-            
-            if self.y_arr[idx] < 1e-6:
+            # self.K_mat[idx] = np.zeros(size)
+            # self.K_mat[idx, idx] = 1
+            # self.b_mat[idx] = 0
+            if self.x_arr[idx] < 1e-6:
                 self.K_mat[idx] = np.zeros(size)
                 self.K_mat[idx, idx] = 1
                 self.b_mat[idx] = 1
-            elif 1 - self.y_arr[idx] < 1e-6:
-                self.K_mat[idx] = np.zeros(size)
-                self.K_mat[idx, idx] = 1
-                self.b_mat[idx] = 0
-                # self.b_mat[idx] = 0
-            # elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
-            #     self.b_mat[idx] = 0.4
-            # elif self.x_arr[idx] == 0:
-            #     self.b_mat[idx] = 0.5
-            else:
-                self.K_mat[idx] = np.zeros(size)
-                self.K_mat[idx, idx] = 1
-                self.b_mat[idx] = 0
-                pass
+            # elif 1 - self.y_arr[idx] < 1e-6:
+            #     self.K_mat[idx] = np.zeros(size)
+            #     self.K_mat[idx, idx] = 1
+            #     self.b_mat[idx] = 0
+            #     # self.b_mat[idx] = 0
+            # # elif self.y_arr[idx] == 1 and self.x_arr[idx] not in [0, 1]:
+            # #     self.b_mat[idx] = 0.4
+            # # elif self.x_arr[idx] == 0:
+            # #     self.b_mat[idx] = 0.5
+            # else:
+            #     self.K_mat[idx] = np.zeros(size)
+            #     self.K_mat[idx, idx] = 1
+            #     self.b_mat[idx] = 0
+            #     pass
                 
         
         pass
@@ -336,80 +338,9 @@ class FEMSolver2D(object):
 
 
         
-    def tripcolor(self, *, show_mesh=True):
-        if self.Phi is None:
-            self.Phi = self.solve()
-        x_arr = self.triangulation.x
-        y_arr = self.triangulation.y
-        triangles = self.triangulation.triangles
-        
-        fig, ax = plt.subplots()
-        vmin = np.min(self.Phi)
-        vmax = np.max(self.Phi)
-        im = ax.tripcolor(x_arr, y_arr, self.Phi,
-                          triangles=triangles,
-                          linewidth=0,
-                          rasterized=True,
-                          vmin=vmin, vmax=vmax,
-                          cmap="hot",
-                          # shading='gouraud',
-                          )
-        
-        # 画网格
-        if show_mesh:
-            ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
-        
-        # colorbar
-        cb = plt.colorbar(im, ax=ax)
-        # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
 
-        
-        # ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
-        ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$", rotation=0)
-        
-        
-        
-        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
-        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
-        ax.set_box_aspect(1)
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        return fig, ax
     
-    def trisurface(self, *, show_mesh=True):
-        if self.Phi is None:
-            self.Phi = self.solve()
-        x_arr = self.triangulation.x
-        y_arr = self.triangulation.y
-        triangles = self.triangulation.triangles
-        
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-        ax.set_proj_type("ortho")
-        # ax.set_zlim3d(zmin=0)
-        vmin = np.min(self.Phi)
-        vmax = np.max(self.Phi)
-        im = ax.plot_trisurf(x_arr, y_arr, self.Phi, triangles=triangles, linewidth=0, rasterized=True, vmin=vmin, vmax=vmax, cmap="viridis")
-        
-        # 画网格
-        # if show_mesh:
-        #     ax.triplot(self.triangulation, color="k", lw=.5, alpha=.5)
-        
-        # colorbar
-        cb = plt.colorbar(im, ax=ax)
-        # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
-        
-        # ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
-        ax.set_xlabel("$x$")
-        ax.set_ylabel("$y$")
-        ax.azim = 225
-        
-        ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
-        ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
-        # ax.set_box_aspect(1)
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        return fig, ax
+
     
     def _cal_xy_arr_3xN(self):
         x_arr_3xN = np.zeros(np.shape(self.ns_mat.transpose()))
@@ -442,6 +373,8 @@ class FEMSolver2D(object):
         K_arr_3x3xN = np.zeros((3, 3, arr_len))
         
         for i in range(3):
+            
+            
             for j in range(3):
                 tmp1 = self.alpha_x * self.b_arr_3xN[i] * self.b_arr_3xN[j] + self.alpha_y * self.c_arr_3xN[i] * self.c_arr_3xN[j]
                 tmp2 = self.beta * (1 + kronecker_delta(i, j))
@@ -500,46 +433,14 @@ class FEMSolver2D(object):
     def plot_mesh(self, triangulation: Triangulation = None, *, show_tag=False):
         if triangulation is None:
             triangulation = self.triangulation
-        
-        # fig, ax = plt.subplots()
-        # ax.triplot(triangulation, color="k", lw=.5)
-        # # plt.text(triangulation.x[triangulation.triangles[0]], triangulation.y[triangulation.triangles[0]], "a")
-        # if show_tag and np.shape(triangulation.triangles)[0] < 99:  # 如果网格过多, 也会强制不标tag
-        #     for row_i, row in enumerate(triangulation.triangles):
-        #         mid_x = np.mean(triangulation.x[row])
-        #         mid_y = np.mean(triangulation.y[row])
-        #         ax.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
-        #         for col in row:
-        #             # TODO 优化 text, 单次text
-        #             ax.text(triangulation.x[col],
-        #                     triangulation.y[col],
-        #                     col,
-        #                     ha="center",
-        #                     va="center",
-        #                     backgroundcolor="r",
-        #                     color="w",
-        #                     bbox=dict(boxstyle="circle"))
-        #
-        # ax.set_title("Triangular Mesh")
-        # ax.set_xlabel("$x$")
-        # ax.set_ylabel("$y$", rotation=0)
-        # ax.set_xlim((self.x_arr.min(), self.x_arr.max()))
-        # ax.set_ylim((self.y_arr.min(), self.y_arr.max()))
-        # ax.set_box_aspect(1)
         return mesh.plot_mesh(self.triangulation, show_tag=show_tag)
 
-    def plot_K_mat(self):  # TODO: 增加 **kwarg, 以自定义cmap等
-        # tmp1 =
-        # tmp2 = np.min(self.K_mat.flatten())
+    def plot_K_mat(self):
         K_mat_arr = self.K_mat.toarray()
         max_abs_K = np.max(np.abs(K_mat_arr.flatten()))
         fig, ax = plt.subplots()
         im = ax.matshow(K_mat_arr/max_abs_K, cmap="seismic", vmin=-1, vmax=1)
         cb = fig.colorbar(im, ax=ax)
-        
-        tmp_len = np.shape(K_mat_arr)[0]
-        # ax.set_xlim((0, tmp_len))
-        # ax.set_ylim((0, tmp_len))
         ax.tick_params(axis="both", direction="out")
         ax.set_title(r"$K/\max|K|$ Matrix")
         
@@ -547,6 +448,73 @@ class FEMSolver2D(object):
     
     def _find_edge_points(self):
         ...
-        
-        
-        
+    
+def tripcolor(fem_solver_2d: FEMSolver2D, *, show_mesh=True):
+    if fem_solver_2d.Phi is None:
+        fem_solver_2d.Phi = fem_solver_2d.solve()
+    x_arr = fem_solver_2d.triangulation.x
+    y_arr = fem_solver_2d.triangulation.y
+    triangles = fem_solver_2d.triangulation.triangles
+    
+    fig, ax = plt.subplots()
+    vmin = np.min(fem_solver_2d.Phi)
+    vmax = np.max(fem_solver_2d.Phi)
+    im = ax.tripcolor(x_arr, y_arr, fem_solver_2d.Phi,
+                      triangles=triangles,
+                      linewidth=0,
+                      rasterized=True,
+                      vmin=vmin, vmax=vmax,
+                      cmap="hot",
+                      # shading='gouraud',
+                      )
+    
+    # 画网格
+    if show_mesh:
+        ax.triplot(fem_solver_2d.triangulation, color="k", lw=.5, alpha=.5)
+    
+    # colorbar
+    cb = plt.colorbar(im, ax=ax)
+    # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
+    
+    # ax.set_title(r"$𝛷(x, y)=2\pi^2\sin\pi x\sin\pi y$")
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("$y$", rotation=0)
+    
+    ax.set_xlim((fem_solver_2d.x_arr.min(), fem_solver_2d.x_arr.max()))
+    ax.set_ylim((fem_solver_2d.y_arr.min(), fem_solver_2d.y_arr.max()))
+    ax.set_box_aspect(1)
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    return fig, ax
+    
+def trisurface(fem_solver_2d: FEMSolver2D, *, show_mesh=False):
+    if fem_solver_2d.Phi is None:
+        fem_solver_2d.Phi = fem_solver_2d.solve()
+    x_arr = fem_solver_2d.triangulation.x
+    y_arr = fem_solver_2d.triangulation.y
+    triangles = fem_solver_2d.triangulation.triangles
+    
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    ax.set_proj_type("ortho")
+    # ax.set_zlim3d(zmin=0)
+    vmin = np.min(fem_solver_2d.Phi)
+    vmax = np.max(fem_solver_2d.Phi)
+    if show_mesh:
+        im = ax.plot_trisurf(x_arr, y_arr, fem_solver_2d.Phi, triangles=triangles,
+                             linewidth=.1, rasterized=False, vmin=vmin, vmax=vmax, cmap="hot", edgecolors="k")
+    else:
+        im = ax.plot_trisurf(x_arr, y_arr, fem_solver_2d.Phi, triangles=triangles,
+                             linewidth=0, rasterized=False, vmin=vmin, vmax=vmax, cmap="hot", edgecolors="None")
+
+    # colorbar
+    cb = plt.colorbar(im, ax=ax)
+    # cb.set_ticks(list(cb.get_ticks()) + [vmin, vmax])
+    ax.set_xlabel("$x$")
+    ax.set_ylabel("$y$")
+    ax.azim = 225
+    
+    ax.set_xlim((fem_solver_2d.x_arr.min(), fem_solver_2d.x_arr.max()))
+    ax.set_ylim((fem_solver_2d.y_arr.min(), fem_solver_2d.y_arr.max()))
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    return fig, ax
