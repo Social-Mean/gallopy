@@ -214,15 +214,6 @@ class FEMSolver2D(object):
         # 如果给的是函数, 则计算各个矩阵; 如果给的是常数, 则赋予常数阵
         for i in range(len(func_lst)):
             if isinstance(func_lst[i], Callable):
-                # FIXME: 应该使用每个单元的值, 而不是节点处的值
-                # param_lst.append(func_lst[i](self.x_arr_3xN, self.y_arr_3xN))
-                # 尝试使用三个节点的均值作为单元的值
-                # TODO: 验证使用均值的正确性
-                # Phi_arr_3xN = func_lst[i](self.x_arr_3xN, self.y_arr_3xN)
-                # Phi_arr_mean_1xN = np.mean(Phi_arr_3xN, axis=0)
-                # param_lst.append(Phi_arr_mean_1xN)
-                
-                
                 # 尝试使用差值函数
                 Phi_1xN = np.zeros(self.N)
                 for e in range(self.N):

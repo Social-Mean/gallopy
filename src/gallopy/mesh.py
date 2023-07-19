@@ -68,7 +68,6 @@ def plot_mesh(triangulation: Triangulation, *, show_tag=False):
             mid_y = np.mean(triangulation.y[row])
             ax.text(mid_x, mid_y, row_i, color="r", ha="center", va="center")
             for col in row:
-                # TODO 优化 text, 单次text
                 ax.text(triangulation.x[col],
                         triangulation.y[col],
                         col,
